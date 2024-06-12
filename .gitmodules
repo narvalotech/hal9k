@@ -1,0 +1,3 @@
+[submodule "cl-mqtt"]
+	path = cl-mqtt
+	url = git@github.com:narvalotech/cl-mqtt.git
