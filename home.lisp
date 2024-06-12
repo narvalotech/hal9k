@@ -1,29 +1,6 @@
 ;; load `json.lisp' and `mqtt.lisp' first
 
-;; -------------- Application Logic --------------
-(defun app-handle-temp (topic payload)
-  "React to a temperature sensor value"
-  (break))
-
-(defparameter *enable-office* t)
-
-(defun app-handle-enable (topic payload)
-  "Enable a space heater"
-  ;; For now, there is only one heater that can be enabled/disabled.
-  (declare (ignore topic))
-  (setf *enable-office* (search "on" payload))
-  (publish *broker* "z2m/prise-bureau" (make-onoff *enable-office*)))
-
-(defparameter *force-office* t)
-
-(defun app-handle-force (topic payload)
-  "Force-enable a space heater"
-  ;; For now, there is only one heater that can be force-enabled.
-  (declare (ignore topic))
-  (setf *force-office* (search "on" payload)))
-
 ;; -------------- Framework code --------------
-(defun make-onoff ())
 (defun app-handle-test (topic payload)
   "Test handler. Returns a string"
   (format nil "Test handler called: ~A ~A" topic payload))
@@ -89,6 +66,30 @@
 (defun app-callback (broker data)
   (setf *broker* broker)
   (app-process-packet data))
+
+;; -------------- Application Logic --------------
+(defun app-handle-temp (topic payload)
+  "React to a temperature sensor value"
+  (break))
+
+(defparameter *enable-office* t)
+
+(defun app-handle-enable (topic payload)
+  "Enable a space heater"
+  ;; For now, there is only one heater that can be enabled/disabled.
+  (declare (ignore topic))
+  (setf *enable-office* (search "on" payload))
+  (set-state *broker* "z2m/prise-bureau" *enable-office*))
+
+(defparameter *force-office* t)
+
+(defun app-handle-force (topic payload)
+  "Force-enable a space heater"
+  ;; For now, there is only one heater that can be force-enabled.
+  (declare (ignore topic))
+  (setf *force-office* (search "on" payload)))
+
+;; -------------- Entrypoint --------------
 
 ;; TODO: create other thread for timeouts
 (mqtt-connect-to-broker "localhost" 1883 #'app-callback)
