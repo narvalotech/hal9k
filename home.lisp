@@ -1,6 +1,30 @@
 ;; load `json.lisp' and `mqtt.lisp' first
 
 ;; -------------- Framework code --------------
+(defun string->number (input)
+  ;; FIXME Unsafe AF
+  (read-from-string input))
+
+(string->number "12.3")
+ ; => 12.3, 4
+
+(defun topic->object-name (topic)
+  (let ((start (search "-" topic))
+        (end (or (search "/get" topic)
+                 (search "/set" topic))))
+    (if (not start)
+        topic
+        (subseq topic (+ 1 start) end))))
+
+(topic->object-name "z2m/therm-test-name-1/set")
+ ; => "test-name-1"
+(topic->object-name "z2m/therm-test-name-1/get")
+ ; => "test-name-1"
+(topic->object-name "z2m/switch-something-something-2")
+ ; => "something-something-2"
+(topic->object-name "othertopic")
+ ; => "othertopic"
+
 (defun set-state (broker topic state)
   (publish broker
            (format nil "~A/set/state" topic)
@@ -89,6 +113,35 @@
   (app-process-packet data))
 
 ;; -------------- Application Logic --------------
+(defun thermostat-value (name)
+  ;; TODO: implement
+  (format t "Thermostat for ~A: ~A~%" name 19)
+  19)
+
+(defun set-thermostat-value (name value)
+  (declare (type number value)
+           (type string name))
+  ;; TODO: implement
+  (format t "New thermostat for ~A: ~A~%" name value)
+  value)
+
+(defun publish-thermostat (broker name)
+  (let ((topic (format nil "z2m/therm-~A" name)))
+    (publish broker
+             topic
+             (format nil "~A" (thermostat-value name)))))
+
+(defun app-handle-therm (topic payload)
+  (let ((name (topic->object-name topic)))
+    (cond
+      ((search "/set" topic)
+       (progn
+         (set-thermostat-value name (string->number payload))
+         (publish-thermostat *broker* name)))
+      ((search "/get" topic)
+       (publish-thermostat *broker* name))
+      (t (format t "Unexpected format [topic] ~A~%" topic)))))
+
 (defun app-handle-temp (topic payload)
   "React to a temperature sensor value"
   (break))
