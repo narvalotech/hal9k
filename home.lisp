@@ -1,6 +1,27 @@
 ;; load `json.lisp' and `mqtt.lisp' first
 
 ;; -------------- Framework code --------------
+(defun set-state (broker topic state)
+  (publish broker
+           (format nil "~A/set/state" topic)
+           (if state "ON" "OFF")))
+
+(with-fn-shadow ('publish #'fake-publish)
+  (set-state nil "z2m/test-actuator" t))
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/test-actuator/set/state
+;  [payload] ON
+;  => NIL
+
+(with-fn-shadow ('publish #'fake-publish)
+  (set-state nil "z2m/test-actuator" nil))
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/test-actuator/set/state
+;  [payload] OFF
+;  => NIL
+
 (defun app-handle-test (topic payload)
   "Test handler. Returns a string"
   (format nil "Test handler called: ~A ~A" topic payload))
