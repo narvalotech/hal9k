@@ -179,6 +179,118 @@
   (declare (ignore topic))
   (setf *force-office* (search "on" payload)))
 
+(defun is-brightness-up? (action)
+  (search "brightness_move_up" action))
+
+(defun is-brightness-down? (action)
+  (search "brightness_move_down" action))
+
+(defun is-on-off? (action)
+  (or (search "on" action)
+      (search "off" action)))
+
+(defun set-all-lights (broker state)
+  (loop for name in '("cuisine"
+                      "entree"
+                      "couloir"
+                      "manger")
+        do (set-state broker
+                      (format nil "z2m/light-~A" name)
+                      state)))
+
+(defun app-handle-switch (topic payload)
+  (let* ((action (jv payload :action))
+         (name (topic->object-name topic))
+         (light (format nil "z2m/light-~A" name))
+         (light-state (search "on" action)))
+
+    (cond
+      ((is-brightness-up? action)
+       (set-brightness *broker* light 255))
+
+      ((is-brightness-down? action)
+       (set-brightness *broker* light 20))
+
+      ((is-on-off? action)
+       (if (search "cuisine" topic)
+           ;; special case: "cuisine" controls all the lights
+           (set-all-lights *broker* light-state)
+           ;; other switches control their respective light
+           (set-state *broker* light light-state))))))
+
+(defun make-switch-payload (action-string)
+  (json:encode-json-to-string
+   (list
+    (cons :battery 74)
+    (cons :linkquality 120)
+    (cons :action action-string))))
+
+(make-switch-payload "brightness_move_up")
+ ; => "{\"battery\":74,\"linkquality\":120,\"action\":\"brightness_move_up\"}"
+
+;; Test invalid json payload
+(with-fn-shadow ('publish #'fake-publish)
+  (app-handle-switch "z2m/switch-chambre"
+                     (json:encode-json-to-string
+                      (list
+                       (cons :battery 74)
+                       (cons :linkquality 120)
+                       (cons :thisisnotaction "somestring")))))
+ ; => NIL
+
+;; Test valid inputs
+(with-fn-shadow ('publish #'fake-publish)
+  (app-handle-switch "z2m/switch-chambre"
+                     (make-switch-payload "brightness_move_down"))
+
+  (app-handle-switch "z2m/switch-chambre"
+                     (make-switch-payload "brightness_move_up"))
+
+  (app-handle-switch "z2m/switch-bureau"
+                     (make-switch-payload "off"))
+
+  (app-handle-switch "z2m/switch-bureau"
+                     (make-switch-payload "on")))
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-chambre/set/brightness
+;  [payload] 20
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-chambre/set/brightness
+;  [payload] 255
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-bureau/set/state
+;  [payload] OFF
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-bureau/set/state
+;  [payload] ON
+;  => NIL
+
+(with-fn-shadow ('publish #'fake-publish)
+  ;; Test "light-cuisine" turns on all the lights
+  (app-handle-switch "z2m/switch-cuisine"
+                     (make-switch-payload "on")))
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-cuisine/set/state
+;  [payload] ON
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-entree/set/state
+;  [payload] ON
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-couloir/set/state
+;  [payload] ON
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/light-manger/set/state
+;  [payload] ON
+;  => NIL
+
 ;; -------------- Entrypoint --------------
 
 ;; TODO: create other thread for timeouts
