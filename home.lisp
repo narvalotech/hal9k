@@ -46,6 +46,20 @@
 ;  [payload] OFF
 ;  => NIL
 
+(defun set-brightness (broker topic brightness)
+  (declare (type number brightness))
+  (publish broker
+           (format nil "~A/set/brightness" topic)
+           brightness))
+
+(with-fn-shadow ('publish #'fake-publish)
+  (set-brightness nil "z2m/test-light" 100))
+; Publishing:
+;  [broker] NIL
+;  [topic] z2m/test-light/set/brightness
+;  [payload] 100
+;  => NIL
+
 (defun app-handle-test (topic payload)
   "Test handler. Returns a string"
   (format nil "Test handler called: ~A ~A" topic payload))
