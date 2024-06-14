@@ -158,7 +158,9 @@
 
 (defun app-handle-temp (topic payload)
   "React to a temperature sensor value"
-  (break))
+
+  ;; TODO: implement
+  (format t "Temperature: ~A ~A~%" topic payload))
 
 (defparameter *enable-office* t)
 
