@@ -69,19 +69,25 @@
   (format t "No handler found: [topic] ~A [message] ~A~%"
           topic payload))
 
-(app-handle-topic "switch-bureau-12" "somepayload")
-(app-handle-topic "temp-bureau-12" "somepayload")
+(app-handle-topic "z2m/test-sensor-0012" (string->ascii "somepayload"))
+ ; => "Test handler called: z2m/test-sensor-0012 somepayload"
 
-(app-handle-topic "test-sensor-0012" "somepayload")
- ; => "Test handler called: test-sensor-0012 somepayload"
-
-(app-handle-topic "topic/with/no_dashes" "p4yload")
+(app-handle-topic "topic/with/no_dashes" (string->ascii "p4yload"))
 ; No handler found: [topic] topic/with/no_dashes [message] p4yload
 ;  => NIL
 
-(defun chars-before-dash (str)
-  "Returns the characters before the first \"-\""
-  (subseq str 0 (search "-" str)))
+(defun extract-message-type (str)
+  "Extracts the chars between \"z2m/\" and \"-\"."
+  (let ((start (if (search "z2m/" str)
+                   (length "z2m/")
+                   0)))
+    (subseq str start (search "-" str))))
+
+(extract-message-type "z2m/msgtype-object")
+ ; => "msgtype"
+
+(extract-message-type "noncompliantmsgtype")
+ ; => "noncompliantmsgtype"
 
 (defun app-handle-topic (topic payload)
   "Find and call a message handler for a given topic"
@@ -91,7 +97,7 @@
   ;; dash, and construct a function name from it, using the following
   ;; scheme: "app-handle-{prefix}". If that function exists, we call
   ;; it, if not, we invoke a default handler.
-  (let* ((message-type (chars-before-dash topic))
+  (let* ((message-type (extract-message-type topic))
          (handler-name (format nil "app-handle-~A" message-type))
          (handler-fn (read-from-string handler-name)))
 
@@ -237,6 +243,10 @@
                        (cons :linkquality 120)
                        (cons :thisisnotaction "somestring")))))
  ; => NIL
+
+(with-fn-shadow ('publish #'fake-publish)
+  (app-handle-topic "z2m/switch-chambre"
+                     (string->ascii (make-switch-payload "brightness_move_down"))))
 
 ;; Test valid inputs
 (with-fn-shadow ('publish #'fake-publish)
