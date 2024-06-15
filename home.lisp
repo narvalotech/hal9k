@@ -1,6 +1,23 @@
 ;; load `json.lisp' and `mqtt.lisp' first
 
 ;; -------------- Framework code --------------
+(defun init-timer (fn)
+  (make-timer fn :thread t))
+
+(defun reset-timer (timer interval)
+  (unschedule-timer timer)
+  (schedule-timer timer interval))
+
+(defun stop-timer (timer)
+  (unschedule-timer timer))
+
+;; This will print to stdout after ~2s
+(let ((timer
+        (init-timer (lambda () (format t "Hello timer~%")))))
+  (reset-timer timer 4)
+  (sleep 2)
+  (reset-timer timer .2))
+
 (defun string->number (input)
   ;; FIXME Unsafe AF
   (read-from-string input))
@@ -300,6 +317,49 @@
 ;  [topic] z2m/light-manger/set/state
 ;  [payload] ON
 ;  => NIL
+
+(defparameter *door-timer*
+  (init-timer
+   (lambda () (set-state *broker* "z2m/light-entree" nil))))
+
+(defparameter *door-timeout* (* 60 5))
+
+(defun app-handle-door (topic payload)
+  (declare (ignore topic))
+  (let ((door-open (not (jv payload :contact)))
+        (light (format nil "z2m/light-entree")))
+    (when door-open
+      ;; turn on the light
+      (set-state *broker* light t)
+      ;; turn off the light 5 minutes later
+      (reset-timer *door-timer* *door-timeout*))))
+
+(defun make-door-payload (contact)
+  (json:encode-json-to-string
+   (list
+    (cons :contact contact)
+    (cons :battery 74)
+    (cons :device_temperature 120)
+    (cons :linkquality 47)
+    (cons :power_outage_count 184)
+    (cons :voltage 2985))))
+
+(make-door-payload t)
+ ; => "{\"contact\":true,\"battery\":74,\"device_temperature\":120,\"linkquality\":47,\"power_outage_count\":184,\"voltage\":2985}"
+
+;; To test this we have to:
+;; - reduce the 5 minutes timeout to something lower
+;; - keep shadowing PUBLISH until the timeout fires
+(with-fn-shadow ('publish #'fake-publish)
+  (let ((aint-nobody-got-time 3))
+    (with-var-shadow ('*door-timeout* aint-nobody-got-time)
+      (app-handle-topic "z2m/door-entree"
+                        (string->ascii (make-door-payload nil)))
+      (sleep (+ 1 aint-nobody-got-time)))))
+
+(with-fn-shadow ('publish #'fake-publish)
+  (app-handle-topic "z2m/door-entree"
+                    (string->ascii (make-door-payload t))))
 
 ;; -------------- Entrypoint --------------
 
