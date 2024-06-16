@@ -68,7 +68,7 @@
   (declare (type number brightness))
   (publish broker
            (format nil "~A/set/brightness" topic)
-           brightness))
+           (format nil "~A" brightness)))
 
 (with-fn-shadow ('publish #'fake-publish)
   (set-brightness nil "z2m/test-light" 100))
@@ -491,6 +491,9 @@
     (sleep 1)
     (publish broker "z2m/light-manger/set/state" "OFF")
     )
+
+(mqtt-with-broker ("192.168.10.175" 1883 broker)
+  (set-brightness broker "z2m/light-chambre" 20))
 
 (mqtt-with-broker ("192.168.10.175" 1883 broker)
     (publish broker "z2m/light-chambre/set/state" "OFF"))
