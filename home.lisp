@@ -150,17 +150,40 @@
   (app-process-packet data))
 
 ;; -------------- Application Logic --------------
+(defparameter *thermostats* (make-hash-table :test 'equalp))
+
 (defun thermostat-value (name)
-  ;; TODO: implement
-  (format t "Thermostat for ~A: ~A~%" name 19)
-  19)
+  (let ((temperature (gethash name *thermostats*)))
+
+    (when (not temperature)
+      (format t "[default] ")
+      (setf temperature 20))
+
+    (format t "Thermostat for ~A: ~A~%" name
+            temperature)
+
+    temperature))
 
 (defun set-thermostat-value (name value)
   (declare (type number value)
            (type string name))
-  ;; TODO: implement
   (format t "New thermostat for ~A: ~A~%" name value)
-  value)
+  (setf (gethash name *thermostats*) value))
+
+;; Read values from disk or load defaults.
+;; TODO: implement read from disk
+(set-thermostat-value "bureau" 19)
+(set-thermostat-value "chambre" 21)
+(set-thermostat-value "rachel" 21)
+; New thermostat for rachel: 21
+;  => 21 (5 bits, #x15, #o25, #b10101)
+
+(thermostat-value "rachel")
+; Thermostat for rachel: 21
+;  => 21 (5 bits, #x15, #o25, #b10101)
+(thermostat-value "noexist")
+; [default] Thermostat for noexist: 20
+;  => 20 (5 bits, #x14, #o24, #b10100)
 
 (defun publish-thermostat (broker name)
   (let ((topic (format nil "z2m/therm-~A" name)))
