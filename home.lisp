@@ -1,4 +1,5 @@
 ;; load `json.lisp' and `mqtt.lisp' first
+(ql:quickload "local-time")
 
 ;; -------------- Framework code --------------
 (defun init-timer (fn)
@@ -202,11 +203,75 @@
        (publish-thermostat *broker* name))
       (t (format t "Unexpected format [topic] ~A~%" topic)))))
 
+(defun print-current-time (stream)
+  (local-time:format-timestring
+   stream (local-time:now)
+   :format '(:year "/" :month "/" :day "-"
+             :hour ":" :min ":" :sec)))
+
+(print-current-time nil)
+ ; => "2024/6/16-22:25:21"
+
+(defun outside-working-hours? (time)
+  ;; Future work:
+  ;; use delta w/ outside temperature to set the start time
+  (let ((start 7)
+        (end 18)
+        (current (local-time:timestamp-hour time)))
+    (or (> current end)
+        (< current start))))
+
+(outside-working-hours?
+ (local-time:parse-timestring "2024-06-13T19:09:06"))
+ ; => T
+
+(outside-working-hours?
+ (local-time:parse-timestring "2024-06-12T03:09:06"))
+ ; => T
+
+(outside-working-hours?
+ (local-time:parse-timestring "2024-06-13T09:09:06"))
+ ; => NIL
+
 (defun app-handle-temp (topic payload)
   "React to a temperature sensor value"
+  (let* ((name (topic->object-name topic))
+         (heater (format nil "z2m/prise-~A" name))
+         (therm (thermostat-value name))
+         (temp (jv payload :temperature))
+         (delta .2))
 
-  ;; TODO: implement
-  (format t "Temperature: ~A ~A~%" topic payload))
+    (unless temp
+      (format t "Unknown format: [~A] ~A~%"
+              topic payload)
+      (return-from app-handle-temp nil))
+
+    (format t "[~A] [~A]: Temperature: ~A~%"
+            (print-current-time nil) name temp)
+
+    ;; Office is special:
+    ;; - it operates only during working hours
+    ;; - it can be disabled entirely
+    ;; - this special handling can also be disabled
+    (when (search "bureau" name)
+      (when (not *force-office*)
+        (when (or (not *enable-office*)
+                  (outside-working-hours? (local-time:now)))
+          (set-state *broker* heater nil)
+          (return-from app-handle-temp nil)))
+
+    (cond
+      ((> temp (+ therm delta))
+        (progn
+          (format t "[~A]: ~A > ~A -> heater [~A] OFF"
+                  name temp therm heater)
+          (set-state *broker* heater nil)))
+
+      ((< temp (- therm delta))
+        (progn
+          (format t "[~A]: ~A < ~A -> heater [~A] OFF"
+                  name temp therm heater)
+          (set-state *broker* heater t)))))))
 
 (defparameter *enable-office* t)
 
