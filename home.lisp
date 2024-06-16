@@ -187,10 +187,9 @@
 ;  => 20 (5 bits, #x14, #o24, #b10100)
 
 (defun publish-thermostat (broker name)
-  (let ((topic (format nil "z2m/therm-~A" name)))
-    (publish broker
-             topic
-             (format nil "~A" (thermostat-value name)))))
+  (publish broker
+           (format nil "z2m/therm-~A" name)
+           (format nil "~A" (thermostat-value name))))
 
 (defun app-handle-therm (topic payload)
   (let ((name (topic->object-name topic)))
