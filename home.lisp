@@ -450,8 +450,7 @@
 
 ;; -------------- Entrypoint --------------
 
-;; TODO: create other thread for timeouts
-(mqtt-connect-to-broker "localhost" 1883 #'app-callback)
+(mqtt-connect-to-broker "192.168.10.175" 1883 #'app-callback)
 
 (subscribe *broker* "test/topic")
 (publish *broker* "test/topic" "important data")
