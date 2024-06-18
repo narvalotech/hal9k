@@ -91,15 +91,8 @@
 
 (defun app-handle-default (topic payload)
   "Fallback handler for MQTT messages"
-  (format t "No handler found: [topic] ~A [message] ~A~%"
+  (format t "No handler: [topic] ~A [message] ~A~%"
           topic payload))
-
-(app-handle-topic "z2m/test-sensor-0012" (string->ascii "somepayload"))
- ; => "Test handler called: z2m/test-sensor-0012 somepayload"
-
-(app-handle-topic "topic/with/no_dashes" (string->ascii "p4yload"))
-; No handler found: [topic] topic/with/no_dashes [message] p4yload
-;  => NIL
 
 (defun extract-message-type (str)
   "Extracts the chars between \"z2m/\" and \"-\"."
@@ -135,27 +128,34 @@
 
     (funcall handler-fn topic payload)))
 
-(defun app-process-packet (packet)
-  ;; For now, we just parse it to stdout
-  (if (> (length packet) 0)
-      (let ((parsed (mqtt-parse-packet packet)))
-        (if (> (length packet) 0)
-            (case (first parsed)
-              (:pingrsp nil)
-              (:publish (app-handle-topic
-                         (getf (cdr parsed) :topic)
-                         (getf (cdr parsed) :payload)))
-              (t (format t "Got packet: ~A~%" parsed)))))))
+(app-handle-topic "z2m/test-sensor-0012" (string->ascii "somepayload"))
+ ; => "Test handler called: z2m/test-sensor-0012 somepayload"
+
+(app-handle-topic "topic/with/no_dashes" (string->ascii "p4yload"))
+; No handler found: [topic] topic/with/no_dashes [message] p4yload
+;  => NIL
+
+(defun app-process-packet (parsed)
+  (if parsed
+      (case (first parsed)
+        (:pingrsp nil)
+        (:publish (app-handle-topic
+                   (getf (cdr parsed) :topic)
+                   (getf (cdr parsed) :payload)))
+        (t (format t "Got packet[~A]: ~X~%" (length parsed) parsed)))))
 
 (app-process-packet
- (mqtt-make-packet :publish
-                   :topic "test-topic/something"
-                   :payload (string->ascii "my-payload 1234 56")))
+ (mqtt-parse-packet
+  (mqtt-make-packet :publish
+                    :topic "test-topic/something"
+                    :payload (string->ascii "my-payload 1234 56"))))
  ; => "Test handler called: test-topic/something my-payload 1234 56"
 
 (defun app-callback (broker data)
   (setf *broker* broker)
-  (app-process-packet data))
+  (when (> (length data) 0)
+    (mapcar #'app-process-packet
+            (mqtt-parse-packets (coerce data 'list)))))
 
 ;; -------------- Application Logic --------------
 (defparameter *thermostats* (make-hash-table :test 'equalp))
@@ -455,54 +455,4 @@
   (app-handle-topic "z2m/door-entree"
                     (string->ascii (make-door-payload t))))
 
-;; -------------- Entrypoint --------------
-
-(mqtt-connect-to-broker "192.168.10.175" 1883 #'app-callback)
-
-(subscribe *broker* "test/topic")
-(publish *broker* "test/topic" "important data")
-(progn (disconnect *broker*) (setf *broker* nil))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;; ---------------------- SCRATCHPAD ----------------------
-(mqtt-with-broker ("192.168.10.175" 1883 *broker*)
-    (publish broker "z2m/light-manger/set/state" "ON")
-    (sleep 1)
-    (publish broker "z2m/light-manger/set/state" "OFF")
-    )
-
-(mqtt-with-broker ("192.168.10.175" 1883 broker)
-  (set-brightness broker "z2m/light-chambre" 20))
-
-(mqtt-with-broker ("192.168.10.175" 1883 broker)
-    (publish broker "z2m/light-chambre/set/state" "OFF"))
-
-(mqtt-with-broker ("192.168.10.175" 1883 broker)
-    (publish broker "z2m/light-chambre/set/state" "ON"))
+(format t "Done eval-ing~%")
