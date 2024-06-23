@@ -1,5 +1,12 @@
 ;; load `json.lisp' and `mqtt.lisp' first
 (ql:quickload "local-time")
+(ql:quickload :cl-json)
+
+(defun jv (json-string key)
+  "Returns the value pointed to by `KEY' in `JSON-STRING'. Use like `GETF'."
+  (let ((decoded (json:decode-json-from-string json-string)))
+    (loop for el in decoded do
+          (if (equal (car el) key) (return (cdr el))))))
 
 ;; -------------- Framework code --------------
 (defun init-timer (fn)
