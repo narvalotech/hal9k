@@ -1,6 +1,28 @@
-;; load `json.lisp' and `mqtt.lisp' first
-(ql:quickload "local-time")
-(ql:quickload :cl-json)
+(asdf:load-system :cl-json)
+(asdf:load-system :local-time)
+(asdf:load-system :cl-mqtt)
+
+(defpackage :home
+  (:use :common-lisp)
+
+  (:import-from :sb-sys
+                #:make-timer
+                #:schedule-timer
+                #:unschedule-timer)
+
+  (:import-from :cl-mqtt
+                #:string->ascii
+                #:ascii->string)
+
+  (:local-nicknames
+   (#:time #:local-time)
+   (#:json #:cl-json)
+   (#:mqtt #:cl-mqtt)))
+
+(in-package :home)
+
+;; get'em debug frames
+(declaim (optimize (debug 3)))
 
 (defun jv (json-string key)
   "Returns the value pointed to by `KEY' in `JSON-STRING'. Use like `GETF'."
@@ -19,11 +41,11 @@
 (defun stop-timer (timer)
   (unschedule-timer timer))
 
-;; This will print to stdout after ~2s
+;; This will print to stdout after ~.2s
 (let ((timer
         (init-timer (lambda () (format t "Hello timer~%")))))
   (reset-timer timer 4)
-  (sleep 2)
+  (sleep .1)
   (reset-timer timer .2))
 
 (defun string->number (input)
@@ -50,12 +72,36 @@
 (topic->object-name "othertopic")
  ; => "othertopic"
 
+(defmacro with-fn-shadow ((orig new) &body body)
+  `(let ((orig-backup))                 ; TODO: use gensym
+     (if (fboundp ,orig)
+         (progn
+           (setf orig-backup (symbol-function ,orig))
+           (setf (symbol-function ,orig) ,new)
+           (unwind-protect (progn ,@body)
+             (setf (symbol-function ,orig) orig-backup)))
+         (error "Function ~A is not defined" ,orig))))
+
+(defmacro with-var-shadow ((orig new) &body body)
+  `(let ((orig-backup))                 ; TODO: use gensym
+     (if (boundp ,orig)
+         (progn
+           (setf orig-backup (symbol-value ,orig))
+           (setf (symbol-value ,orig) ,new)
+           (unwind-protect (progn ,@body)
+             (setf (symbol-value ,orig) orig-backup)))
+         (error "Variable ~A is not defined" ,orig))))
+
+(defun fake-publish (broker topic payload)
+  (format t "Publishing:~% [broker] ~A~% [topic] ~A~% [payload] ~A~%"
+          broker topic payload))
+
 (defun set-state (broker topic state)
-  (publish broker
+  (mqtt:publish broker
            (format nil "~A/set/state" topic)
            (if state "ON" "OFF")))
 
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (set-state nil "z2m/test-actuator" t))
 ; Publishing:
 ;  [broker] NIL
@@ -63,7 +109,7 @@
 ;  [payload] ON
 ;  => NIL
 
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (set-state nil "z2m/test-actuator" nil))
 ; Publishing:
 ;  [broker] NIL
@@ -73,11 +119,11 @@
 
 (defun set-brightness (broker topic brightness)
   (declare (type number brightness))
-  (publish broker
+  (mqtt:publish broker
            (format nil "~A/set/brightness" topic)
            (format nil "~A" brightness)))
 
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (set-brightness nil "z2m/test-light" 100))
 ; Publishing:
 ;  [broker] NIL
@@ -145,17 +191,19 @@
         (t (format t "Got packet[~A]: ~X~%" (length parsed) parsed)))))
 
 (app-process-packet
- (mqtt-parse-packet
-  (mqtt-make-packet :publish
+ (mqtt:parse-packet
+  (mqtt:make-packet :publish
                     :topic "test-topic/something"
                     :payload (string->ascii "my-payload 1234 56"))))
  ; => "Test handler called: test-topic/something my-payload 1234 56"
+
+(defparameter *broker* nil)
 
 (defun app-callback (broker data)
   (setf *broker* broker)
   (when (> (length data) 0)
     (mapcar #'app-process-packet
-            (mqtt-parse-packets (coerce data 'list)))))
+            (mqtt:parse-packets (coerce data 'list)))))
 
 ;; -------------- Application Logic --------------
 (defparameter *thermostats* (make-hash-table :test 'equalp))
@@ -194,7 +242,7 @@
 ;  => 20 (5 bits, #x14, #o24, #b10100)
 
 (defun publish-thermostat (broker name)
-  (publish broker
+  (mqtt:publish broker
            (format nil "z2m/therm-~A" name)
            (format nil "~A" (thermostat-value name))))
 
@@ -210,8 +258,8 @@
       (t (format t "Unexpected format [topic] ~A~%" topic)))))
 
 (defun print-current-time (stream)
-  (local-time:format-timestring
-   stream (local-time:now)
+  (time:format-timestring
+   stream (time:now)
    :format '(:year "/" :month "/" :day "-"
              :hour ":" :min ":" :sec)))
 
@@ -223,20 +271,20 @@
   ;; use delta w/ outside temperature to set the start time
   (let ((start 7)
         (end 18)
-        (current (local-time:timestamp-hour time)))
+        (current (time:timestamp-hour time)))
     (or (> current end)
         (< current start))))
 
 (outside-working-hours?
- (local-time:parse-timestring "2024-06-13T19:09:06"))
+ (time:parse-timestring "2024-06-13T19:09:06"))
  ; => T
 
 (outside-working-hours?
- (local-time:parse-timestring "2024-06-12T03:09:06"))
+ (time:parse-timestring "2024-06-12T03:09:06"))
  ; => T
 
 (outside-working-hours?
- (local-time:parse-timestring "2024-06-13T09:09:06"))
+ (time:parse-timestring "2024-06-13T09:09:06"))
  ; => NIL
 
 (defun app-handle-temp (topic payload)
@@ -262,7 +310,7 @@
     (when (search "bureau" name)
       (when (not *force-office*)
         (when (or (not *enable-office*)
-                  (outside-working-hours? (local-time:now)))
+                  (outside-working-hours? (time:now)))
           (set-state *broker* heater nil)
           (return-from app-handle-temp nil)))
 
@@ -346,7 +394,7 @@
  ; => "{\"battery\":74,\"linkquality\":120,\"action\":\"brightness_move_up\"}"
 
 ;; Test invalid json payload
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (app-handle-switch "z2m/switch-chambre"
                      (json:encode-json-to-string
                       (list
@@ -355,12 +403,12 @@
                        (cons :thisisnotaction "somestring")))))
  ; => NIL
 
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (app-handle-topic "z2m/switch-chambre"
                      (string->ascii (make-switch-payload "brightness_move_down"))))
 
 ;; Test valid inputs
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (app-handle-switch "z2m/switch-chambre"
                      (make-switch-payload "brightness_move_down"))
 
@@ -390,7 +438,7 @@
 ;  [payload] ON
 ;  => NIL
 
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   ;; Test "light-cuisine" turns on all the lights
   (app-handle-switch "z2m/switch-cuisine"
                      (make-switch-payload "on")))
@@ -444,14 +492,14 @@
 ;; To test this we have to:
 ;; - reduce the 5 minutes timeout to something lower
 ;; - keep shadowing PUBLISH until the timeout fires
-(with-fn-shadow ('publish #'fake-publish)
-  (let ((aint-nobody-got-time 3))
+(with-fn-shadow ('mqtt:publish #'fake-publish)
+  (let ((aint-nobody-got-time .5))
     (with-var-shadow ('*door-timeout* aint-nobody-got-time)
       (app-handle-topic "z2m/door-entree"
                         (string->ascii (make-door-payload nil)))
-      (sleep (+ 1 aint-nobody-got-time)))))
+      (sleep (+ .2 aint-nobody-got-time)))))
 
-(with-fn-shadow ('publish #'fake-publish)
+(with-fn-shadow ('mqtt:publish #'fake-publish)
   (app-handle-topic "z2m/door-entree"
                     (string->ascii (make-door-payload t))))
 
