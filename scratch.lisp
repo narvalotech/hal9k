@@ -41,25 +41,38 @@
 (with-fn-shadow ('publish #'fake-publish)
   (app-callback nil *rec4*))
 
-(mqtt-with-broker ("192.168.10.175" 1883 *broker*)
+(mqtt:with-broker ("192.168.10.175" 1883 *broker*)
     (publish broker "z2m/light-manger/set/state" "ON")
     (sleep 1)
     (publish broker "z2m/light-manger/set/state" "OFF")
     )
 
-(mqtt-with-broker ("192.168.10.175" 1883 broker)
-  (set-brightness broker "z2m/light-chambre" 200))
+(mqtt:with-broker ("192.168.10.175" 1883 broker)
+  (set-brightness broker "z2m/light-chambre" 250))
 
-(mqtt-with-broker ("192.168.10.175" 1883 broker)
+(mqtt:with-broker ("192.168.10.175" 1883 broker)
     (publish broker "z2m/light-chambre/set/state" "OFF"))
 
-(mqtt-with-broker ("192.168.10.175" 1883 broker)
+(mqtt:with-broker ("192.168.10.175" 1883 broker)
     (publish broker "z2m/light-chambre/set/state" "ON"))
 
 ;; -------------------
 
-(mqtt-connect-to-broker "192.168.10.175" 1883 #'app-callback)
-(progn (format t "DO-IT~%") (subscribe *broker* "#"))
-(progn (disconnect *broker*) (setf *broker* nil))
+(mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
+(progn (format t "DO-IT~%") (mqtt:subscribe *broker* "#"))
+(progn (mqtt:disconnect *broker*) (setf *broker* nil))
 
-(publish *broker* "z2m/light-chambre/set/state" "ON")
+(mqtt:publish *broker* "z2m/light-chambre/set/state" "ON")
+
+(defun slime-connected-p ()
+  (and (boundp '*slime-connection*)
+       *slime-connection*))
+
+(defun custom-debugger-hook (condition hook)
+  (if (slime-connected-p)
+      (invoke-debugger condition)
+      (progn
+        (format t "Error discarded: ~A~%" condition)
+        (values))))
+
+(setf *debugger-hook* #'custom-debugger-hook)
