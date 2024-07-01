@@ -150,12 +150,21 @@
   (format t "No handler: [topic] ~A [message] ~A~%"
           topic payload))
 
+(defun app-handle-bridge/logging (topic payload)
+  ;; null-route verbose logging messages
+  ;; (format t "logging: ~A~%" payload)
+  (declare (ignore topic payload))
+  nil)
+
 (defun extract-message-type (str)
   "Extracts the chars between \"z2m/\" and \"-\"."
   (let ((start (if (search "z2m/" str)
                    (length "z2m/")
                    0)))
     (subseq str start (search "-" str))))
+
+(extract-message-type "z2m/bridge/logging")
+ ; => "bridge/logging"
 
 (extract-message-type "z2m/msgtype-object")
  ; => "msgtype"
