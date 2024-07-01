@@ -1,3 +1,13 @@
+(require 'asdf)
+
+;; open SLYNK server for remote debugging
+;; slynk is installed in:
+;; (ql:where-is-system :slynk)
+;; (ql:quickload "slynk")
+(asdf:load-system :slynk)
+(slynk:create-server :port 42069 :dont-close t)
+(setf slynk:*use-dedicated-output-stream* nil)
+
 (asdf:load-system :cl-json)
 (asdf:load-system :local-time)
 (asdf:load-system :cl-mqtt)
@@ -287,6 +297,9 @@
  (time:parse-timestring "2024-06-13T09:09:06"))
  ; => NIL
 
+(defparameter *enable-office* t)
+(defparameter *force-office* t)
+
 (defun app-handle-temp (topic payload)
   "React to a temperature sensor value"
   (let* ((name (topic->object-name topic))
@@ -327,16 +340,12 @@
                   name temp therm heater)
           (set-state *broker* heater t)))))))
 
-(defparameter *enable-office* t)
-
 (defun app-handle-enable (topic payload)
   "Enable a space heater"
   ;; For now, there is only one heater that can be enabled/disabled.
   (declare (ignore topic))
   (setf *enable-office* (search "on" payload))
   (set-state *broker* "z2m/prise-bureau" *enable-office*))
-
-(defparameter *force-office* t)
 
 (defun app-handle-force (topic payload)
   "Force-enable a space heater"
