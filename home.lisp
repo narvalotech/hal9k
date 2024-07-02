@@ -6,7 +6,6 @@
 ;; (ql:quickload "slynk")
 (asdf:load-system :slynk)
 (slynk:create-server :port 42069 :dont-close t)
-(setf slynk:*use-dedicated-output-stream* nil)
 
 (asdf:load-system :cl-json)
 (asdf:load-system :local-time)
