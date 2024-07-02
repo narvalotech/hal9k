@@ -529,3 +529,14 @@
                     (string->ascii (make-door-payload t))))
 
 (format t "Done eval-ing~%")
+
+(defun main ()
+  (handler-case (mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
+    ;; Catch a user's C-c
+    (#+sbcl sb-sys:interactive-interrupt
+      () (progn
+           (format *error-output* "Caught interrupt, aborting~%")
+           (uiop:quit)))
+    (error (c) (format t "Unknown error occured:~&~a~&" c))))
+
+(main)
