@@ -147,14 +147,21 @@
 
 (defun app-handle-default (topic payload)
   "Fallback handler for MQTT messages"
-  (format t "No handler: [topic] ~A [message] ~A~%"
+  (format *error-output* "No handler: [topic] ~A [message] ~A~%"
           topic payload))
+
+(defun null-route (topic payload)
+  ;; (format t "discarding: ~A~%" payload)
+  (declare (ignore topic payload))
+  nil)
 
 (defun app-handle-bridge/logging (topic payload)
   ;; null-route verbose logging messages
-  ;; (format t "logging: ~A~%" payload)
-  (declare (ignore topic payload))
-  nil)
+  (null-route topic payload))
+
+(defun app-handle-bridge/log (topic payload)
+  ;; null-route verbose logging messages
+  (null-route topic payload))
 
 (defun extract-message-type (str)
   "Extracts the chars between \"z2m/\" and \"-\"."
