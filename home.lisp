@@ -5,7 +5,6 @@
 ;; (ql:where-is-system :slynk)
 ;; (ql:quickload "slynk")
 (asdf:load-system :slynk)
-(slynk:create-server :port 42069 :dont-close t)
 
 (asdf:load-system :cl-json)
 (asdf:load-system :local-time)
@@ -530,6 +529,7 @@
 (format t "Done eval-ing~%")
 
 (defun main ()
+  (slynk:create-server :port 42069 :dont-close t)
   (handler-case (mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
     ;; Catch a user's C-c
     (#+sbcl sb-sys:interactive-interrupt
@@ -538,4 +538,9 @@
            (uiop:quit)))
     (error (c) (format t "Unknown error occured:~&~a~&" c))))
 
-(main)
+;; How to install deps, load and run
+;;
+;; sbcl --eval '(push "/home/jon/repos/hal9k/" ql:*local-project-directories*)' \
+;;   --eval '(ql:quickload "home")' --quit
+;;
+;; sbcl --load home.lisp --eval "(in-package :home)" --eval "(main)"
