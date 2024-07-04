@@ -552,9 +552,20 @@
            (uiop:quit)))
     (error (c) (format t "Unknown error occured:~&~a~&" c))))
 
-;; How to install deps, load and run
-;;
-;; sbcl --eval '(push "/home/jon/repos/hal9k/" ql:*local-project-directories*)' \
-;;   --eval '(ql:quickload "home")' --quit
-;;
-;; sbcl --load home.lisp --eval "(in-package :home)" --eval "(main)"
+#|
+;; Bootstrap quicklisp:
+
+curl -O https://beta.quicklisp.org/quicklisp.lisp && \
+sbcl --load quicklisp.lisp \
+     --eval '(quicklisp-quickstart:install)' \
+     --eval '(ql-util:without-prompting (ql:add-to-init-file))' \
+     --quit
+
+How to install deps, load and run
+
+sbcl --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+     --eval '(ql:quickload "home")' \
+     --eval "(in-package :home)" \
+     --eval "(main)"
+
+|#
