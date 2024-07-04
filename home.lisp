@@ -528,8 +528,22 @@
 
 (format t "Done eval-ing~%")
 
+(defun slynk-listener-thread-p (thread)
+  "Check if the given thread is a Slynk listener thread."
+  (let ((thread-name (sb-thread:thread-name thread)))
+    (format t "thread: ~A~%" thread-name)
+    (and thread-name
+         (search "slynk" thread-name :test #'equalp))))
+
+(defun slynk-server-running-p ()
+  "Check if there is any active Slynk listener thread."
+  (some #'slynk-listener-thread-p (sb-thread:list-all-threads)))
+
 (defun main ()
-  (slynk:create-server :port 42069 :dont-close t)
+  (unless (slynk-server-running-p)
+    (format t "Starting SLYNK server~%")
+    (slynk:create-server :port 42069 :dont-close t))
+
   (handler-case (mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
     ;; Catch a user's C-c
     (#+sbcl sb-sys:interactive-interrupt
