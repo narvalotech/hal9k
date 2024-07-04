@@ -6,13 +6,11 @@ RUN apt-get update && \
     apt-get install -y sbcl git curl
 
 # Set up Quicklisp
-RUN printf "\n" | curl -O https://beta.quicklisp.org/quicklisp.lisp && \
+RUN curl -O https://beta.quicklisp.org/quicklisp.lisp && \
     sbcl --load quicklisp.lisp \
     --eval '(quicklisp-quickstart:install)' \
+    --eval '(ql-util:without-prompting (ql:add-to-init-file))' \
     --quit
-
-# Add Quicklisp to the SBCL initialization file
-RUN echo '(let ((quicklisp-init (merge-pathnames "quicklisp/setup.lisp" (user-homedir-pathname)))) (when (probe-file quicklisp-init) (load quicklisp-init)))' >> /root/.sbclrc
 
 # Copy the project files into the container
 COPY . /app
