@@ -4,11 +4,11 @@
 ;; slynk is installed in:
 ;; (ql:where-is-system :slynk)
 ;; (ql:quickload "slynk")
-(asdf:load-system :slynk)
+(require :slynk)
 
-(asdf:load-system :cl-json)
-(asdf:load-system :local-time)
-(asdf:load-system :cl-mqtt)
+(require :cl-json)
+(require :local-time)
+(require :cl-mqtt)
 
 (defpackage :home
   (:use :common-lisp)
