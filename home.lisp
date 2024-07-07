@@ -279,6 +279,8 @@
          (publish-thermostat *broker* name)))
       ((search "/get" topic)
        (publish-thermostat *broker* name))
+      ;; FIXME: that last one is always called because we publish the new values
+      ;; ourselves right above.
       (t (format t "Unexpected format [topic] ~A~%" topic)))))
 
 (defun print-current-time (stream)
@@ -350,7 +352,7 @@
 
       ((< temp (- therm delta))
         (progn
-          (format t "[~A]: ~A < ~A -> heater [~A] OFF"
+          (format t "[~A]: ~A < ~A -> heater [~A] ON"
                   name temp therm heater)
           (set-state *broker* heater t)))))))
 
