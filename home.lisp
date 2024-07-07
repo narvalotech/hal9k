@@ -80,64 +80,16 @@
 (topic->object-name "othertopic")
  ; => "othertopic"
 
-(defmacro with-fn-shadow ((orig new) &body body)
-  `(let ((orig-backup))                 ; TODO: use gensym
-     (if (fboundp ,orig)
-         (progn
-           (setf orig-backup (symbol-function ,orig))
-           (setf (symbol-function ,orig) ,new)
-           (unwind-protect (progn ,@body)
-             (setf (symbol-function ,orig) orig-backup)))
-         (error "Function ~A is not defined" ,orig))))
-
-(defmacro with-var-shadow ((orig new) &body body)
-  `(let ((orig-backup))                 ; TODO: use gensym
-     (if (boundp ,orig)
-         (progn
-           (setf orig-backup (symbol-value ,orig))
-           (setf (symbol-value ,orig) ,new)
-           (unwind-protect (progn ,@body)
-             (setf (symbol-value ,orig) orig-backup)))
-         (error "Variable ~A is not defined" ,orig))))
-
-(defun fake-publish (broker topic payload)
-  (format t "Publishing:~% [broker] ~A~% [topic] ~A~% [payload] ~A~%"
-          broker topic payload))
-
 (defun set-state (broker topic state)
   (mqtt:publish broker
            (format nil "~A/set/state" topic)
            (if state "ON" "OFF")))
-
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (set-state nil "z2m/test-actuator" t))
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/test-actuator/set/state
-;  [payload] ON
-;  => NIL
-
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (set-state nil "z2m/test-actuator" nil))
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/test-actuator/set/state
-;  [payload] OFF
-;  => NIL
 
 (defun set-brightness (broker topic brightness)
   (declare (type number brightness))
   (mqtt:publish broker
            (format nil "~A/set/brightness" topic)
            (format nil "~A" brightness)))
-
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (set-brightness nil "z2m/test-light" 100))
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/test-light/set/brightness
-;  [payload] 100
-;  => NIL
 
 (defun app-handle-test (topic payload)
   "Test handler. Returns a string"
@@ -418,73 +370,6 @@
 (make-switch-payload "brightness_move_up")
  ; => "{\"battery\":74,\"linkquality\":120,\"action\":\"brightness_move_up\"}"
 
-;; Test invalid json payload
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (app-handle-switch "z2m/switch-chambre"
-                     (json:encode-json-to-string
-                      (list
-                       (cons :battery 74)
-                       (cons :linkquality 120)
-                       (cons :thisisnotaction "somestring")))))
- ; => NIL
-
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (app-handle-topic "z2m/switch-chambre"
-                     (string->ascii (make-switch-payload "brightness_move_down"))))
-
-;; Test valid inputs
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (app-handle-switch "z2m/switch-chambre"
-                     (make-switch-payload "brightness_move_down"))
-
-  (app-handle-switch "z2m/switch-chambre"
-                     (make-switch-payload "brightness_move_up"))
-
-  (app-handle-switch "z2m/switch-bureau"
-                     (make-switch-payload "off"))
-
-  (app-handle-switch "z2m/switch-bureau"
-                     (make-switch-payload "on")))
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-chambre/set/brightness
-;  [payload] 20
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-chambre/set/brightness
-;  [payload] 255
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-bureau/set/state
-;  [payload] OFF
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-bureau/set/state
-;  [payload] ON
-;  => NIL
-
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  ;; Test "light-cuisine" turns on all the lights
-  (app-handle-switch "z2m/switch-cuisine"
-                     (make-switch-payload "on")))
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-cuisine/set/state
-;  [payload] ON
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-entree/set/state
-;  [payload] ON
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-couloir/set/state
-;  [payload] ON
-; Publishing:
-;  [broker] NIL
-;  [topic] z2m/light-manger/set/state
-;  [payload] ON
-;  => NIL
-
 (defparameter *door-timer*
   (init-timer
    (lambda () (set-state *broker* "z2m/light-entree" nil))))
@@ -500,33 +385,6 @@
       (set-state *broker* light t)
       ;; turn off the light 5 minutes later
       (reset-timer *door-timer* *door-timeout*))))
-
-(defun make-door-payload (contact)
-  (json:encode-json-to-string
-   (list
-    (cons :contact contact)
-    (cons :battery 74)
-    (cons :device_temperature 120)
-    (cons :linkquality 47)
-    (cons :power_outage_count 184)
-    (cons :voltage 2985))))
-
-(make-door-payload t)
- ; => "{\"contact\":true,\"battery\":74,\"device_temperature\":120,\"linkquality\":47,\"power_outage_count\":184,\"voltage\":2985}"
-
-;; To test this we have to:
-;; - reduce the 5 minutes timeout to something lower
-;; - keep shadowing PUBLISH until the timeout fires
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (let ((aint-nobody-got-time .5))
-    (with-var-shadow ('*door-timeout* aint-nobody-got-time)
-      (app-handle-topic "z2m/door-entree"
-                        (string->ascii (make-door-payload nil)))
-      (sleep (+ .2 aint-nobody-got-time)))))
-
-(with-fn-shadow ('mqtt:publish #'fake-publish)
-  (app-handle-topic "z2m/door-entree"
-                    (string->ascii (make-door-payload t))))
 
 (format t "Done eval-ing~%")
 
