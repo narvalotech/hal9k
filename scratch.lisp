@@ -62,6 +62,9 @@
 (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
     (mqtt:publish broker "z2m/enable-bureau/set/state" "off"))
 
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+    (mqtt:publish broker "z2m/therm-bureau/set" "21"))
+
 ;; -------------------
 
 (mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
