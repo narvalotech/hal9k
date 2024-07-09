@@ -415,6 +415,10 @@
 #|
 ;; Bootstrap quicklisp:
 
+Deploy with:
+
+cd ~/repos/hal9k && rsync -av --exclude '.*' ../hal9k nas:~/
+
 curl -O https://beta.quicklisp.org/quicklisp.lisp && \
 sbcl --load quicklisp.lisp \
      --eval '(quicklisp-quickstart:install)' \
