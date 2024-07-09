@@ -1,0 +1,15 @@
+[Unit]
+Description=Run home.lisp script at boot
+After=multi-user.target
+
+[Service]
+Type=simple
+User=john
+WorkingDirectory=/home/john/hal9k
+ExecStart=/home/john/hal9k/home.sh
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
