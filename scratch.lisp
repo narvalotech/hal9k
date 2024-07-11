@@ -42,19 +42,18 @@
   (app-callback nil *rec4*))
 
 (mqtt:with-broker ("192.168.10.175" 1883 *broker* :client-id-str "agent")
-    (publish broker "z2m/light-manger/set/state" "ON")
+    (mqtt:publish broker "z2m/light-manger/set/state" "ON")
     (sleep 1)
-    (publish broker "z2m/light-manger/set/state" "OFF")
-    )
+    (mqtt:publish broker "z2m/light-manger/set/state" "OFF"))
 
 (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
   (set-brightness broker "z2m/light-chambre" 250))
 
 (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
-    (publish broker "z2m/light-chambre/set/state" "OFF"))
+    (mqtt:publish broker "z2m/light-chambre/set/state" "OFF"))
 
 (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
-    (publish broker "z2m/light-chambre/set/state" "ON"))
+    (mqtt:publish broker "z2m/light-chambre/set/state" "ON"))
 
 (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
     (mqtt:publish broker "z2m/force-bureau/set/state" "on"))
