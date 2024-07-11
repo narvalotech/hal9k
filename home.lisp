@@ -24,8 +24,7 @@
 
   (:local-nicknames
    (#:time #:local-time)
-   (#:json #:cl-json)
-   (#:mqtt #:cl-mqtt)))
+   (#:json #:cl-json)))
 
 (in-package :home)
 
