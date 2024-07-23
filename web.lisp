@@ -21,6 +21,9 @@
 ;; - office
 ;; - rest of house
 
+(defun handle-input (payload)
+  (format t "Handling input: ~A~%" payload))
+
 (defun render-slider (name)
   (spinneret:with-html-string
     (:li (:input :type :range
@@ -32,12 +35,13 @@
   (spinneret:with-html-string
     (:li (:button
           :class "toggle-button"
+          :name name
           :value name name))))
 
 (defparameter jsmain
   (ps:ps
-    (defun send-put-request (url action value)
-      (let ((data (ps:create :action action :name value)))
+    (defun send-put-request (url type name value)
+      (let ((data (ps:create :type type :name name :value value)))
         (ps:chain (fetch url
                          (ps:create :method "PUT"
                                     :headers (ps:create "Content-Type" "application/json")
@@ -51,14 +55,19 @@
         (loop for slider across sliders
               do (ps:chain slider (add-event-listener
                                    "change"
-                                   (lambda () (send-put-request "/input" "slider" (ps:@ slider value))))))))
+                                   (lambda () (send-put-request "/input" "slider"
+                                                                (ps:@ slider name)
+                                                                (ps:@ slider value))))))))
 
     (defun setup-button-event-listeners ()
       (let ((buttons (ps:chain document (get-elements-by-class-name "toggle-button"))))
         (loop for button across buttons
               do (ps:chain button (add-event-listener
                                    "click"
-                                   (lambda () (send-put-request "/input" "toggle" (ps:@ button value))))))))
+                                   (lambda () (send-put-request "/input" "button"
+                                                                (ps:@ button name)
+                                                                ;; TODO: use 'value' attr
+                                                                "toggle")))))))
 
     (setup-slider-event-listeners)
     (setup-button-event-listeners)))
@@ -77,16 +86,22 @@
      (:script (:raw jsmain)))))
 
 (defun response (env)
-  ;; (declare (ignore env))
   (format t "env: ~A~%" env)
-  ;; (break)
+
   (when (equal (getf env :request-method) :PUT)
-    (let* ((stream (getf env :raw-body)))
-      (format t "=> payload: ~A~%"
-              (read-line stream))))
+    (let* ((stream (getf env :raw-body))
+           (payload (read-line stream)))
+
+      (format t "=> payload: ~A~%" payload)
+
+      (when (equal (getf env :request-uri) "/input")
+        (handle-input payload))))
+
+  ;; TODO: read current values from MQTT
 
   ;; Response:
   ;; [status code] [headers (plist)] [body (strings / vector / pathname)]
+  ;; TODO: err status code when MQTT send fails
   (list 200 '(:content-type "text/html") (list (controls))))
 
 (defvar *handler*
