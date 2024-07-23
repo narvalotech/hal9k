@@ -1,6 +1,9 @@
 (ql:quickload :parenscript)
 (ql:quickload :clack)
 (ql:quickload :spinneret)
+(ql:quickload :cl-mqtt)
+(ql:quickload :cl-json)
+(ql:quickload :alexandria)
 
 ;; What we need:
 ;; - light controls
@@ -21,22 +24,54 @@
 ;; - office
 ;; - rest of house
 
-(defun handle-input (payload)
-  (format t "Handling input: ~A~%" payload))
+(defun decode-type/name/value (payload)
+  (let ((decoded (json:decode-json-from-string payload)))
+    (mapcar #'cdr decoded)))
 
-(defun render-slider (name)
+(decode-type/name/value "{\"type\":\"button\",\"name\":\"chambre\",\"value\":\"toggle\"}")
+ ; => ("button" "chambre" "toggle")
+
+(defun publish (topic value)
+  (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+    (mqtt:publish broker topic value)))
+
+(defun toggle-light (name)
+  ;; TODO: return new state
+  (publish (format nil "z2m/light-~A/set" name) "TOGGLE"))
+
+(defun set-brightness (name brightness)
+  (declare (type string brightness))
+  (publish (format nil "z2m/light-~A/set/brightness" name)
+           brightness))
+
+(defun handle-light (payload)
+  (destructuring-bind (type name value) (decode-type/name/value payload)
+    (alexandria:switch (type :test #'equal)
+      ("slider" (progn (format t "Handle slider: ~A val ~A~%" name value)
+                       (set-brightness name value)))
+      ("button" (progn (format t "Handle button: ~A val ~A~%" name value)
+                       (toggle-light name)))
+      (t (format t "Unknown type ~A~%" type)))))
+
+(defun render-slider (name class)
   (spinneret:with-html-string
     (:li (:input :type :range
-                 :class "slider"
+                 :class class
                  :name name
                  :min 0 :max 255 :step 1))))
 
-(defun render-toggle (name)
+(defun render-light-slider (name)
+  (render-slider name "light-slider"))
+
+(defun render-toggle (name class)
   (spinneret:with-html-string
     (:li (:button
-          :class "toggle-button"
+          :class class
           :name name
           :value name name))))
+
+(defun render-light-toggle (name)
+  (render-toggle name "light-toggle"))
 
 (defparameter jsmain
   (ps:ps
@@ -51,20 +86,20 @@
 
     ;; note: use "input" for events on value change
     (defun setup-slider-event-listeners ()
-      (let ((sliders (ps:chain document (get-elements-by-class-name "slider"))))
+      (let ((sliders (ps:chain document (get-elements-by-class-name "light-slider"))))
         (loop for slider across sliders
               do (ps:chain slider (add-event-listener
                                    "change"
-                                   (lambda () (send-put-request "/input" "slider"
+                                   (lambda () (send-put-request "/light" "slider"
                                                                 (ps:@ slider name)
                                                                 (ps:@ slider value))))))))
 
     (defun setup-button-event-listeners ()
-      (let ((buttons (ps:chain document (get-elements-by-class-name "toggle-button"))))
+      (let ((buttons (ps:chain document (get-elements-by-class-name "light-toggle"))))
         (loop for button across buttons
               do (ps:chain button (add-event-listener
                                    "click"
-                                   (lambda () (send-put-request "/input" "button"
+                                   (lambda () (send-put-request "/light" "button"
                                                                 (ps:@ button name)
                                                                 ;; TODO: use 'value' attr
                                                                 "toggle")))))))
@@ -80,9 +115,9 @@
      (:p "Lights")
      (:ul
       (:raw
-       (render-slider "chambre")
-       (render-toggle "chambre")
-       (render-toggle "couloir")))
+       (render-light-slider "chambre")
+       (render-light-toggle "chambre")
+       (render-light-toggle "couloir")))
      (:script (:raw jsmain)))))
 
 (defun response (env)
@@ -94,8 +129,8 @@
 
       (format t "=> payload: ~A~%" payload)
 
-      (when (equal (getf env :request-uri) "/input")
-        (handle-input payload))))
+      (when (equal (getf env :request-uri) "/light")
+        (handle-light payload))))
 
   ;; TODO: read current values from MQTT
 
