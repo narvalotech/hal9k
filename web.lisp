@@ -1,9 +1,18 @@
-(ql:quickload :parenscript)
-(ql:quickload :clack)
-(ql:quickload :spinneret)
-(ql:quickload :cl-mqtt)
-(ql:quickload :cl-json)
 (ql:quickload :alexandria)
+
+;; Web server framework
+(ql:quickload :clack)
+;; HTML with s-exps
+(ql:quickload :spinneret)
+;; CSS with s-exps
+(ql:quickload :lass)
+;; JS with s-exps
+(ql:quickload :parenscript)
+
+;; To decode/encode the MQTT payloads
+(ql:quickload :cl-json)
+;; To talk to MQTT (obv)
+(ql:quickload :cl-mqtt)
 
 ;; What we need:
 ;; - light controls
