@@ -98,7 +98,7 @@
 (defun render-control-group (name &rest rendered-controls)
   (spinneret:with-html-string
     (:div :class "control-group"
-          (:span :class :label name)
+          (:span :class "label" name)
           (:raw
            (apply #'concatenate 'string rendered-controls)))))
 
@@ -110,11 +110,11 @@
                    (:raw *svg-light-on*)
                    (:raw *svg-light-off*))
           (:input :type :range
+                  :class "slider light"
                   :min 0
                   :max 255
                   :step 1
-                  :value 42
-                  :class "slider light"))))
+                  :value 42))))
 
 ;; (format t "~A" (render-light "hello"))
 
@@ -127,6 +127,7 @@
                    (:raw *svg-heat-on*)
                    (:raw *svg-heat-off*))
           (:input :type :number
+                  :class "num-input"
                   :inputmode :numeric
                   :enterkeyhint "done"
                   :min 10
@@ -181,6 +182,151 @@
     (setup-slider-event-listeners)
     (setup-button-event-listeners)))
 
+(defparameter stylesheet.css
+  (lass:compile-and-write
+   '(:root
+     :--orange_3 "#ff7800"
+     :--light_2 "#f6f5f4"
+     :--light_3 "#deddda"
+     :--dark_3 "#3d3846"
+     :--dark_5 "#000"
+     :--accent-color "var(--orange_3)")
+
+   '(::selection
+     :background-color "color-mix(in hsl, var(--accent-color) 50%, transparent))")
+
+   '(:media "(prefers-color-scheme: no-preference)"
+     (::root
+      :--background "var(--light_2)"
+      :--background-2 "var(--light_3)"
+      :--foreground "var(--dark_3)"
+      ))
+
+   '(:media "(prefers-color-scheme: light)"
+     (::root
+      :--background "var(--light_2)"
+      :--background-2 "var(--light_3)"
+      :--foreground "var(--dark_3)"
+      ))
+
+   '(:media "(prefers-color-scheme: dark)"
+     (::root
+      :--background "var(--dark_5)"
+      :--background-2 "var(--dark_3)"
+      :--foreground "var(--light_2)"
+      ))
+
+   '(body
+     :border 0
+     :margin 0
+     :padding 0
+     :font-family "system-ui"
+     :padding-block "1rem"
+     :width "100%"
+     :display "flex"
+     :flex-direction "column"
+     :align-items "center"
+     :background-color "var(--background)"
+     :color "var(--foreground)"
+     :overflow-x "hidden"
+     :accent-color "var(--accent-color)"
+     :touch-action "manipulation"
+     )
+
+   '(.controls
+     :max-width "100vw"
+     :height "100%"
+     :display "flex"
+     :flex-direction "column"
+     :align-items "center")
+
+   '(.control-group
+     :width "90%"
+     :display "flex"
+     :flex-direction "column"
+     :border "1rem solid var(--background-2)"
+     :border-radius "0.5rem"
+     :background-color "var(--background-2)"
+     :margin-bottom "1rem")
+
+   '((.control-group > .label)
+     :margin-bottom "1rem"
+     :text-decoration "underline"
+     :text-underline-position "below"
+     :text-decoration-color "var(--accent-color)")
+
+   '((:and .control-group :last-child)
+     :margin-bottom 0)
+
+   '(.control
+     :width "100%"
+     :display "grid"
+     :grid-template-columns "0.5fr auto 1fr"
+     :grid-template-rows "1fr"
+     :justify-content "right"
+     :gap "1rem"
+     :margin-bottom "1rem")
+
+   '((.control > *)
+     :display "flex"
+     :align-items "center")
+
+   '(.switch
+     :width "2.5rem"
+     :height "2.5rem"
+     :align-items "center"
+     :justify-content "center"
+     :margin "auto"
+     :background "none"
+     :border "none"
+     :cursor "pointer"
+     :outline "none"
+     :white-space-collapse "collapse")
+
+   '((.switch > svg)
+     :color "var(--foreground)")
+
+   '((.switch > .light-off)
+     :display "none")
+
+   '((.switch > .heat-off)
+     :display "none")
+
+   '((:and .switch :disabled)
+     :opacity "50%")
+
+   '(.slider
+     :outline "none")
+
+   '((:and .slider :hover)
+     :cursor "grab")
+
+   '((:and .slider :active)
+     :cursor "grabbing")
+
+   '((:and .slider :disabled)
+     :accent-color "var(--foreground)")
+
+   '(.num-input
+     :border "none"
+     :background "none"
+     :border-bottom "0.2em solid var(--accent-color)"
+     :border-radius 0
+     :color "var(--foreground)"
+     :outline "none"
+     :font-size "1rem")
+
+   '((:and .num-input :focus)
+     :border-color "var(--background-2)"
+     :outline "0.2em solid var(--accent-color)")
+
+   '((:and .num-input :invalid)
+     :text-decoration-line "underline"
+     :text-decoration-style "wavy"
+     :text-decoration-color "var(--red_3)")
+
+   ))
+
 ;; TODO: remove
 (defparameter jsmain "")
 
@@ -188,7 +334,9 @@
   (spinneret:with-html-string
     (:doctype)
     (:head
-     (:title "Hjem"))
+     (:meta :name "viewport" :content "width=device-width, initial-scale=1")
+     (:title "Hjem")
+     (:style (:raw stylesheet.css)))
     (:body
      (:div :class "controls"
       (:raw
@@ -228,7 +376,3 @@
    'response))
 
 (clack:stop *handler*)
-
-(lass:compile-and-write
- '(div
-   :background black))
