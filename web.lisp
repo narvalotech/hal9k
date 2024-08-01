@@ -360,9 +360,6 @@
 
    ))
 
-;; TODO: remove
-(defparameter main.js "")
-
 (defun controls ()
   (spinneret:with-html-string
     (:doctype)
