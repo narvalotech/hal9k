@@ -48,6 +48,10 @@
   ;; TODO: return new state
   (publish (format nil "z2m/light-~A/set" name) "TOGGLE"))
 
+(defun set-light (name state)
+  (publish (format nil "z2m/light-~A/set" name)
+           (if (equal state "on") "ON" "OFF")))
+
 (defun set-brightness (name brightness)
   (declare (type string brightness))
   (publish (format nil "z2m/light-~A/set/brightness" name)
@@ -59,7 +63,7 @@
       ("slider" (progn (format t "Handle slider: ~A val ~A~%" name value)
                        (set-brightness name value)))
       ("button" (progn (format t "Handle button: ~A val ~A~%" name value)
-                       (toggle-light name)))
+                       (set-light name value)))
       (t (format t "Unknown type ~A~%" type)))))
 
 (defparameter *svg-light-on*
@@ -135,19 +139,6 @@
 
 ;; (format t "~A" (render-heater "hello"))
 
-;; TODO:
-;; - render off by default
-;; - change button image when it's on or off
-(defun render-switch (name class)
-  (spinneret:with-html-string
-    (:li (:button
-          :class class
-          :name name
-          :value name name))))
-
-(defun render-light-switch (name)
-  (render-switch name "light-switch"))
-
 (defparameter main.js
   (ps:ps
     (defun send-put-request (url type name value)
@@ -159,9 +150,29 @@
                   (then (lambda (response) (ps:@ response json)))
                   (then (lambda (data) (ps:@ console (log data)))))))
 
+    (defun toggle-display-style (img-on img-off current-state)
+      (if (equal current-state "on")
+          (progn
+            (setf (ps:@ img-on style display) "none")
+            (setf (ps:@ img-off style display) "block"))
+          (progn
+            (setf (ps:@ img-on style display) "block")
+            (setf (ps:@ img-off style display) "none"))))
+
+    (defun toggle-state (data)
+      (if (equal (ps:@ data state) "on")
+          (setf (ps:@ data state) "off")
+          (setf (ps:@ data state) "on")))
+
+    (defun button-event-listener (event img-on img-off name data)
+      (toggle-display-style img-on img-off (ps:@ data state))
+      (toggle-state data)
+      (send-put-request "/light" "button" name (ps:@ data state)))
+
     ;; note: use "input" for events on value change
+    ;; FIXME
     (defun setup-slider-event-listeners ()
-      (let ((sliders (ps:chain document (get-elements-by-class-name "light-slider"))))
+      (let ((sliders (ps:chain document (get-elements-by-class-name "slider light"))))
         (loop for slider across sliders
               do (ps:chain slider (add-event-listener
                                    "change"
@@ -170,14 +181,17 @@
                                                                 (ps:@ slider value))))))))
 
     (defun setup-button-event-listeners ()
-      (let ((buttons (ps:chain document (get-elements-by-class-name "light-toggle"))))
+      (let ((buttons (ps:chain document (get-elements-by-class-name "switch light"))))
         (loop for button across buttons
               do (ps:chain button (add-event-listener
                                    "click"
-                                   (lambda () (send-put-request "/light" "button"
-                                                                (ps:@ button name)
-                                                                ;; TODO: use 'value' attr
-                                                                "toggle")))))))
+                                   (lambda (event)
+                                     (button-event-listener
+                                      event
+                                      (ps:chain button (query-selector "svg.light-on"))
+                                      (ps:chain button (query-selector "svg.light-off"))
+                                      (ps:@ button parent-node dataset name)
+                                      (ps:@ button dataset))))))))
 
     (setup-slider-event-listeners)
     (setup-button-event-listeners)))
