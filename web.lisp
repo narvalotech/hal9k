@@ -191,16 +191,18 @@
       (toggle-state data)
       (send-put-request (get-endpoint type) "button" name (ps:@ data state)))
 
+    (defun light-slider-event-listener (name value)
+      (send-put-request "/light" "slider" name value))
+
     ;; note: use "input" for events on value change
-    ;; FIXME
     (defun setup-slider-event-listeners ()
       (let ((sliders (ps:chain document (get-elements-by-class-name "slider light"))))
         (loop for slider across sliders
               do (ps:chain slider (add-event-listener
                                    "change"
-                                   (lambda () (send-put-request "/light" "slider"
-                                                                (ps:@ slider name)
-                                                                (ps:@ slider value))))))))
+                                   (lambda () (light-slider-event-listener
+                                               (ps:@ slider name)
+                                               (ps:@ slider value))))))))
 
     (defun setup-button-event-listeners ()
       (let ((buttons (ps:chain document (get-elements-by-class-name "switch"))))
