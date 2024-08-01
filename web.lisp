@@ -44,6 +44,9 @@
   (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
     (mqtt:publish broker topic value)))
 
+(defun publish (topic value)
+  (format t "############# PUBLISH: [~A] ~A~%" topic value))
+
 (defun toggle-light (name)
   ;; TODO: return new state
   (publish (format nil "z2m/light-~A/set" name) "TOGGLE"))
