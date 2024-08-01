@@ -69,15 +69,26 @@
                        (set-light name value)))
       (t (format t "Unknown type ~A~%" type)))))
 
+(defun set-heat (name state)
+  (publish (format nil "z2m/heat-~A/set" name)
+           (if (equal state "on") "ON" "OFF")))
+
+(defun handle-heat (payload)
+  (destructuring-bind (type name value) (decode-type/name/value payload)
+    (alexandria:switch (type :test #'equal)
+      ("button" (progn (format t "Handle button: ~A val ~A~%" name value)
+                       (set-heat name value)))
+      (t (format t "Unknown type ~A~%" type)))))
+
 (defparameter *svg-light-on*
-  "<svg class=\"light-on\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-lightbulb\">
+  "<svg class=\"on\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-lightbulb\">
                             <path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/>
                             <path d=\"M9 18h6\"/>
                             <path d=\"M10 22h4\"/>
                         </svg>")
 
 (defparameter *svg-light-off*
-  "<svg class=\"light-off\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-lightbulb-off\">
+  "<svg class=\"off\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-lightbulb-off\">
                             <path d=\"M16.8 11.2c.8-.9 1.2-2 1.2-3.2a6 6 0 0 0-9.3-5\"/>
                             <path d=\"m2 2 20 20\"/>
                             <path d=\"M6.3 6.3a4.67 4.67 0 0 0 1.2 5.2c.7.7 1.3 1.5 1.5 2.5\"/>
@@ -86,12 +97,12 @@
                         </svg>")
 
 (defparameter *svg-heat-on*
-  "<svg class=\"heat-on\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-flame\">
+  "<svg class=\"on\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-flame\">
                             <path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"/>
                         </svg>")
 
 (defparameter *svg-heat-off*
-  "<svg class=\"heat-off\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-snowflake\">
+  "<svg class=\"off\" xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-snowflake\">
                             <line x1=\"2\" x2=\"22\" y1=\"12\" y2=\"12\"/>
                             <line x1=\"12\" x2=\"12\" y1=\"2\" y2=\"22\"/>
                             <path d=\"m20 16-4-4 4-4\"/>
@@ -114,6 +125,7 @@
     (:div :class "control light" :data-name name
           (:span :class "label light" name)
           (:button :class "switch light" :data-state "on"
+                   :name "light"
                    (:raw *svg-light-on*)
                    (:raw *svg-light-off*))
           (:input :type :range
@@ -131,6 +143,7 @@
     (:div :class "control heat" :data-name name
           (:span :class "label heat" name)
           (:button :class "switch heat" :data-state "on"
+                   :name "heat"
                    (:raw *svg-heat-on*)
                    (:raw *svg-heat-off*))
           (:input :type :number
@@ -167,10 +180,16 @@
           (setf (ps:@ data state) "off")
           (setf (ps:@ data state) "on")))
 
-    (defun button-event-listener (event img-on img-off name data)
+    (defun get-endpoint (type)
+      (cond
+        ((equal type "light") "/light")
+        ((equal type "heat") "/heat")
+        (t (error "not supported"))))
+
+    (defun button-event-listener (img-on img-off type name data)
       (toggle-display-style img-on img-off (ps:@ data state))
       (toggle-state data)
-      (send-put-request "/light" "button" name (ps:@ data state)))
+      (send-put-request (get-endpoint type) "button" name (ps:@ data state)))
 
     ;; note: use "input" for events on value change
     ;; FIXME
@@ -184,15 +203,15 @@
                                                                 (ps:@ slider value))))))))
 
     (defun setup-button-event-listeners ()
-      (let ((buttons (ps:chain document (get-elements-by-class-name "switch light"))))
+      (let ((buttons (ps:chain document (get-elements-by-class-name "switch"))))
         (loop for button across buttons
               do (ps:chain button (add-event-listener
                                    "click"
-                                   (lambda (event)
+                                   (lambda ()
                                      (button-event-listener
-                                      event
-                                      (ps:chain button (query-selector "svg.light-on"))
-                                      (ps:chain button (query-selector "svg.light-off"))
+                                      (ps:chain button (query-selector "svg.on"))
+                                      (ps:chain button (query-selector "svg.off"))
+                                      (ps:@ button name)
                                       (ps:@ button parent-node dataset name)
                                       (ps:@ button dataset))))))))
 
@@ -303,10 +322,7 @@
    '((.switch > svg)
      :color "var(--foreground)")
 
-   '((.switch > .light-off)
-     :display "none")
-
-   '((.switch > .heat-off)
+   '((.switch > .off)
      :display "none")
 
    '((:and .switch :disabled)
@@ -377,6 +393,9 @@
            (payload (read-line stream)))
 
       (format t "=> payload: ~A~%" payload)
+
+      (when (equal (getf env :request-uri) "/heat")
+        (handle-heat payload))
 
       (when (equal (getf env :request-uri) "/light")
         (handle-light payload))))
