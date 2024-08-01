@@ -148,7 +148,7 @@
 (defun render-light-switch (name)
   (render-switch name "light-switch"))
 
-(defparameter jsmain
+(defparameter main.js
   (ps:ps
     (defun send-put-request (url type name value)
       (let ((data (ps:create :type type :name name :value value)))
@@ -328,7 +328,7 @@
    ))
 
 ;; TODO: remove
-(defparameter jsmain "")
+(defparameter main.js "")
 
 (defun controls ()
   (spinneret:with-html-string
@@ -348,7 +348,7 @@
         "HEAT"
         (render-heater "chambre")
         (render-heater "rachel"))))
-     (:script (:raw jsmain)))))
+     (:script (:raw main.js)))))
 
 (format t "~A" (controls))
 
