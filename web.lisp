@@ -220,7 +220,7 @@
               do (ps:chain slider (add-event-listener
                                    "change"
                                    (lambda () (light-slider-event-listener
-                                               (ps:@ slider name)
+                                               (ps:@ slider parent-node dataset name)
                                                (ps:@ slider value))))))))
 
     (defun setup-button-event-listeners ()
