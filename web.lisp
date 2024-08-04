@@ -69,8 +69,13 @@
                        (set-light name value)))
       (t (format t "Unknown type ~A~%" type)))))
 
+(defun set-thermostat (name value)
+  (publish (format nil "z2m/therm-~A/set" name)
+           value))
+
 (defun set-heat (name state)
-  (publish (format nil "z2m/heat-~A/set" name)
+  "Enable a space heater"
+  (publish (format nil "z2m/enable-~A/set" name)
            (if (equal state "on") "ON" "OFF")))
 
 (defun handle-heat (payload)
@@ -78,6 +83,8 @@
     (alexandria:switch (type :test #'equal)
       ("button" (progn (format t "Handle button: ~A val ~A~%" name value)
                        (set-heat name value)))
+      ("number" (progn (format t "Handle number: ~A val ~A~%" name value)
+                       (set-thermostat name value)))
       (t (format t "Unknown type ~A~%" type)))))
 
 (defparameter *svg-light-on*
@@ -194,6 +201,18 @@
     (defun light-slider-event-listener (name value)
       (send-put-request "/light" "slider" name value))
 
+    (defun heat-number-event-listener (name value)
+      (send-put-request "/heat" "number" name value))
+
+    (defun setup-number-event-listeners ()
+      (let ((numbers (ps:chain document (get-elements-by-class-name "num-input"))))
+        (loop for number across numbers
+              do (ps:chain number (add-event-listener
+                                   "change"
+                                   (lambda () (heat-number-event-listener
+                                               (ps:@ number parent-node dataset name)
+                                               (ps:@ number value))))))))
+
     ;; note: use "input" for events on value change
     (defun setup-slider-event-listeners ()
       (let ((sliders (ps:chain document (get-elements-by-class-name "slider light"))))
@@ -217,6 +236,7 @@
                                       (ps:@ button parent-node dataset name)
                                       (ps:@ button dataset))))))))
 
+    (setup-number-event-listeners)
     (setup-slider-event-listeners)
     (setup-button-event-listeners)))
 
