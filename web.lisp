@@ -407,7 +407,7 @@
 (format t "~A" (controls))
 
 (defun response (env)
-  (format t "env: ~A~%" env)
+  ;; (format t "env: ~A~%" env)
 
   (when (equal (getf env :request-method) :PUT)
     (let* ((stream (getf env :raw-body))
