@@ -14,25 +14,6 @@
 ;; To talk to MQTT (obv)
 (ql:quickload :cl-mqtt)
 
-;; What we need:
-;; - light controls
-;;   - bedroom (on/dim)
-;;   - hallway (on)
-;;   - entrance (on/dim)
-;;   - kitchen counter (on)
-;;   - kitchen table (on/dim)
-;; - climate control
-;;   - bedroom (temp)
-;;   - rachel (temp)
-;;   - office (on/force/temp)
-;;
-;; rooms:
-;; - bedroom
-;; - rachel's bedroom
-;; - living room
-;; - office
-;; - rest of house
-
 (defun decode-type/name/value (payload)
   (let ((decoded (json:decode-json-from-string payload)))
     (mapcar #'cdr decoded)))
@@ -397,9 +378,13 @@
        (render-control-group
         "LIGHT"
         (render-light "chambre")
-        (render-light "couloir"))
+        (render-light "couloir")
+        (render-light "entree")
+        (render-light "cuisine")
+        (render-light "salon"))
        (render-control-group
         "HEAT"
+        (render-heater "bureau")
         (render-heater "chambre")
         (render-heater "rachel"))))
      (:script (:raw main.js)))))
