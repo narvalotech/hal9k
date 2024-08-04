@@ -1,3 +1,7 @@
+(require :asdf)
+
+(push "/home/john/hal9k/" ql:*local-project-directories*)
+
 (ql:quickload :alexandria)
 
 ;; Web server framework
@@ -389,7 +393,7 @@
         (render-heater "rachel"))))
      (:script (:raw main.js)))))
 
-(format t "~A" (controls))
+;; (format t "~A" (controls))
 
 (defun response (env)
   ;; (format t "env: ~A~%" env)
@@ -413,11 +417,22 @@
   ;; TODO: err status code when MQTT send fails
   (list 200 '(:content-type "text/html") (list (controls))))
 
+(format t "Starting webserver~%")
+
 (defvar *handler*
-  (clack:clackup
-   'response))
+  (clack:clackup 'response :address "0.0.0.0"))
+
+(format t "Hit enter to stop the server~%")
+(read-line)
 
 (clack:stop *handler*)
+(format t "Stopped~%")
+
+#|
+;; How to install deps and run
+sbcl --script /home/john/hal9k/web.lisp
+
+|#
 
 ;; TODO:
 ;; - add "force" heater button
