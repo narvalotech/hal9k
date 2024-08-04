@@ -162,6 +162,7 @@
 
 ;; (format t "~A" (render-heater "hello"))
 
+;; TODO: fix naming, it's all over the place
 (defparameter main.js
   (ps:ps
     (defun send-put-request (url type name value)
@@ -431,3 +432,7 @@
    'response))
 
 (clack:stop *handler*)
+
+;; TODO:
+;; - add "force" heater button
+;; - show current temperature
