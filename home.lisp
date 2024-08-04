@@ -104,6 +104,12 @@
   (declare (ignore topic payload))
   nil)
 
+(defun app-handle-prise (topic payload)
+  (null-route topic payload))
+
+(defun app-handle-light (topic payload)
+  (null-route topic payload))
+
 (defun app-handle-bridge/logging (topic payload)
   ;; null-route verbose logging messages
   (null-route topic payload))
