@@ -317,6 +317,7 @@
   "Enable a space heater"
   ;; For now, there is only one heater that can be enabled/disabled.
   (declare (ignore topic))
+  (format t "Heater bureau: ~A~%" payload)
   (setf *enable-office* (search "on" payload))
   (set-state *broker* "z2m/prise-bureau" *enable-office*))
 
