@@ -161,13 +161,9 @@
                   (then (lambda (data) (ps:@ console (log data)))))))
 
     (defun toggle-display-style (img-on img-off current-state)
-      (if (equal current-state "on")
-          (progn
-            (setf (ps:@ img-on style display) "none")
-            (setf (ps:@ img-off style display) "block"))
-          (progn
-            (setf (ps:@ img-on style display) "block")
-            (setf (ps:@ img-off style display) "none"))))
+      (let ((on (equal current-state "on")))
+        (setf (ps:@ img-on style display) (if on "none" "block"))
+        (setf (ps:@ img-off style display) (if on "block" "none"))))
 
     (defun toggle-state (data)
       (if (equal (ps:@ data state) "on")
@@ -185,47 +181,33 @@
       (toggle-state data)
       (send-put-request (get-endpoint type) "button" name (ps:@ data state)))
 
-    (defun light-slider-event-listener (name value)
-      (send-put-request "/light" "slider" name value))
+    (defun setup-event-listener (element-class event setup-fn)
+      (let ((elements (ps:chain document (get-elements-by-class-name element-class))))
+        (loop for element across elements
+              do (ps:chain element (add-event-listener event (lambda () (setup-fn element)))))))
 
-    (defun heat-number-event-listener (name value)
-      (send-put-request "/heat" "number" name value))
+    (defun setup-change-event-listener (element-class url input-type)
+      ;; note: use "input" for events on value change
+      (setup-event-listener element-class "change"
+                            (lambda (element)
+                              (send-put-request url input-type
+                                                (ps:@ element parent-node dataset name)
+                                                (ps:@ element value)))))
 
-    (defun setup-number-event-listeners ()
-      (let ((numbers (ps:chain document (get-elements-by-class-name "num-input"))))
-        (loop for number across numbers
-              do (ps:chain number (add-event-listener
-                                   "change"
-                                   (lambda () (heat-number-event-listener
-                                               (ps:@ number parent-node dataset name)
-                                               (ps:@ number value))))))))
+    (defun setup-event-listeners ()
+      (setup-change-event-listener "num-input" "/heat" "number")
+      (setup-change-event-listener "slider light" "/light" "slider")
 
-    ;; note: use "input" for events on value change
-    (defun setup-slider-event-listeners ()
-      (let ((sliders (ps:chain document (get-elements-by-class-name "slider light"))))
-        (loop for slider across sliders
-              do (ps:chain slider (add-event-listener
-                                   "change"
-                                   (lambda () (light-slider-event-listener
-                                               (ps:@ slider parent-node dataset name)
-                                               (ps:@ slider value))))))))
+      (setup-event-listener "switch" "click"
+                            (lambda (button)
+                              (button-event-listener
+                               (ps:chain button (query-selector "svg.on"))
+                               (ps:chain button (query-selector "svg.off"))
+                               (ps:@ button name)
+                               (ps:@ button parent-node dataset name)
+                               (ps:@ button dataset)))))
 
-    (defun setup-button-event-listeners ()
-      (let ((buttons (ps:chain document (get-elements-by-class-name "switch"))))
-        (loop for button across buttons
-              do (ps:chain button (add-event-listener
-                                   "click"
-                                   (lambda ()
-                                     (button-event-listener
-                                      (ps:chain button (query-selector "svg.on"))
-                                      (ps:chain button (query-selector "svg.off"))
-                                      (ps:@ button name)
-                                      (ps:@ button parent-node dataset name)
-                                      (ps:@ button dataset))))))))
-
-    (setup-number-event-listeners)
-    (setup-slider-event-listeners)
-    (setup-button-event-listeners)))
+    (setup-event-listeners)))
 
 (defparameter stylesheet.css
   (lass:compile-and-write
