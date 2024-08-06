@@ -385,7 +385,7 @@
         (render-light "couloir")
         (render-light "entree")
         (render-light "cuisine")
-        (render-light "salon"))
+        (render-light "manger"))
        (render-control-group
         "HEAT"
         (render-heater "bureau")
