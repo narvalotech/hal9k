@@ -41,28 +41,51 @@
 (with-fn-shadow ('publish #'fake-publish)
   (app-callback nil *rec4*))
 
-(mqtt:with-broker ("192.168.10.175" 1883 *broker* :client-id-str "agent")
+(defun gen-random-id ()
+  (format nil "client-~A" (gensym)))
+
+(mqtt:with-broker ("192.168.10.175" 1883 *broker* :client-id-str (gen-random-id))
     (mqtt:publish broker "z2m/light-manger/set/state" "ON")
     (sleep 1)
     (mqtt:publish broker "z2m/light-manger/set/state" "OFF"))
 
-(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
   (set-brightness broker "z2m/light-chambre" 250))
 
-(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
     (mqtt:publish broker "z2m/light-chambre/set/state" "OFF"))
 
-(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
     (mqtt:publish broker "z2m/light-chambre/set/state" "ON"))
 
-(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
     (mqtt:publish broker "z2m/force-bureau/set/state" "on"))
 
-(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
     (mqtt:publish broker "z2m/enable-bureau/set/state" "off"))
 
-(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
-    (mqtt:publish broker "z2m/therm-bureau/set" "21"))
+(mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+  (mqtt:publish broker "z2m/therm-bureau/set" "18"))
+
+(ql:quickload :cl-mqtt)
+
+(defun filter-publish (packet)
+  (when packet
+    (case (first packet)
+      (:publish t))))
+
+(filter-publish (mqtt:parse-packet (mqtt:make-packet :publish :topic "hello/mytopic" :payload '(1 2 3 4))))
+ ; => T
+(filter-publish (mqtt:parse-packet (mqtt:make-packet :subscribe :packet-id 77 :topics '("my/long/topic" "test-topic"))))
+ ; => NIL
+
+(time
+ (read-from-string
+  (mqtt:ascii->string
+   (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+     (mqtt:publish-with-response broker
+                                 "z2m/therm-bureau/get" "0"
+                                 "z2m/therm-bureau" #'filter-publish)))))
 
 ;; -------------------
 
