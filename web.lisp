@@ -25,8 +25,13 @@
 (decode-type/name/value "{\"type\":\"button\",\"name\":\"chambre\",\"value\":\"toggle\"}")
  ; => ("button" "chambre" "toggle")
 
+(defun gen-random-id ()
+  (format nil "client-~A" (gensym)))
+
+(defparameter *client-id* (gen-random-id))
+
 (defun publish (topic value)
-  (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str "agent")
+  (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str *client-id*)
     (format t "############# PUBLISH: [~A] ~A~%" topic value)
     (mqtt:publish broker topic value)))
 
