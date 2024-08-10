@@ -235,10 +235,7 @@
          (set-thermostat-value name (string->number payload))
          (publish-thermostat *broker* name)))
       ((search "/get" topic)
-       (publish-thermostat *broker* name))
-      ;; FIXME: that last one is always called because we publish the new values
-      ;; ourselves right above.
-      (t (format t "Unexpected format [topic] ~A~%" topic)))))
+       (publish-thermostat *broker* name)))))
 
 (defun print-current-time (stream)
   (time:format-timestring
