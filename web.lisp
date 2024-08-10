@@ -135,6 +135,20 @@
 
 ;; (format t "~A" (render-light "hello"))
 
+(defun filter-publish (packet)
+  (when packet
+    (case (first packet)
+      (:publish t))))
+
+(defun get-thermostat-value (name)
+  (read-from-string
+   (mqtt:ascii->string
+    (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+      (mqtt:publish-with-response broker
+                                  (format nil "z2m/therm-~A/get" name) "0"
+                                  (format nil "z2m/therm-~A" name)
+                                  #'filter-publish)))))
+
 ;; maybe a slider + value display would be better?
 (defun render-heater (name)
   (spinneret:with-html-string
@@ -148,6 +162,7 @@
                   :class "num-input"
                   :inputmode :numeric
                   :enterkeyhint "done"
+                  :value (get-thermostat-value name)
                   :min 10
                   :max 35))))
 
