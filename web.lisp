@@ -233,6 +233,7 @@
   (lass:compile-and-write
    '(:root
      :--orange_3 "#ff7800"
+     :--red_3 "#e01b24"
      :--light_2 "#f6f5f4"
      :--light_3 "#deddda"
      :--dark_3 "#3d3846"
@@ -289,6 +290,7 @@
 
    '(.control-group
      :width "90%"
+     :min-width "25vw"
      :display "flex"
      :flex-direction "column"
      :border "1rem solid var(--background-2)"
@@ -307,16 +309,13 @@
 
    '(.control
      :width "100%"
-     :display "grid"
-     :grid-template-columns "0.5fr auto 1fr"
-     :grid-template-rows "1fr"
-     :justify-content "right"
-     :gap "1rem"
+     :display "flex"
+     :align-items "center"
      :margin-bottom "1rem")
 
-   '((.control > *)
-     :display "flex"
-     :align-items "center")
+   '((.control > .label)
+     :width "30%"
+     :text-align "right")
 
    '(.switch
      :width "2.5rem"
@@ -340,6 +339,7 @@
      :opacity "50%")
 
    '(.slider
+     :width "50%"
      :outline "none")
 
    '((:and .slider :hover)
@@ -352,6 +352,7 @@
      :accent-color "var(--foreground)")
 
    '(.num-input
+     :width "50%"
      :border "none"
      :background "none"
      :border-bottom "0.2em solid var(--accent-color)"
