@@ -270,6 +270,28 @@
 (defparameter *enable-office* t)
 (defparameter *force-office* t)
 
+(defparameter *temperatures* (make-hash-table :test 'equalp))
+
+(defun cache-temp (name value)
+  (setf (gethash name *temperatures*) value))
+
+(defun get-cached-temp (name)
+  (gethash name *temperatures*))
+
+(defun publish-temp (broker name value)
+  (mqtt:publish broker
+           (format nil "z2m/cached/temp-~A" name)
+           (format nil "~A" value)))
+
+(defun app-handle-cached/temp (topic payload)
+  (declare (ignore payload))
+  (let* ((name (topic->object-name topic))
+         (temp (gethash name *temperatures*)))
+
+    (cond
+      ((search "/get" topic)
+       (publish-temp *broker* name (if temp temp 0))))))
+
 (defun app-handle-temp (topic payload)
   "React to a temperature sensor value"
   (let* ((name (topic->object-name topic))
@@ -285,6 +307,8 @@
 
     (format t "[~A] [~A]: Temperature: ~A~%"
             (print-current-time nil) name temp)
+
+    (cache-temp name temp)
 
     ;; Office is special:
     ;; - it operates only during working hours

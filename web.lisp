@@ -149,11 +149,22 @@
                                   (format nil "z2m/therm-~A" name)
                                   #'filter-publish)))))
 
+(defun get-temp-value (name)
+  (read-from-string
+   (mqtt:ascii->string
+    (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+      (mqtt:publish-with-response broker
+                                  (format nil "z2m/cached/temp-~A/get" name) "0"
+                                  (format nil "z2m/cached/temp-~A" name)
+                                  #'filter-publish)))))
+
 ;; maybe a slider + value display would be better?
 (defun render-heater (name)
   (spinneret:with-html-string
     (:div :class "control heat" :data-name name
           (:span :class "label heat" name)
+          (:span :class "current-temperature"
+                 (format nil "~2,1F" (get-temp-value name)))
           (:button :class "switch heat" :data-state "on"
                    :name "heat"
                    (:raw *svg-heat-on*)
@@ -350,6 +361,10 @@
 
    '((:and .slider :disabled)
      :accent-color "var(--foreground)")
+
+   '(.current-temperature
+     :width "20%"
+     :text-align "center")
 
    '(.num-input
      :width "50%"
