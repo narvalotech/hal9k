@@ -339,14 +339,14 @@
   ;; For now, there is only one heater that can be enabled/disabled.
   (declare (ignore topic))
   (format t "Heater bureau: ~A~%" payload)
-  (setf *enable-office* (search "on" payload))
+  (setf *enable-office* (equalp "on" payload))
   (set-state *broker* "z2m/prise-bureau" *enable-office*))
 
 (defun app-handle-force (topic payload)
   "Force-enable a space heater"
   ;; For now, there is only one heater that can be force-enabled.
   (declare (ignore topic))
-  (setf *force-office* (search "on" payload)))
+  (setf *force-office* (equalp "on" payload)))
 
 (defun is-brightness-up? (action)
   (search "brightness_move_up" action))
@@ -355,8 +355,8 @@
   (search "brightness_move_down" action))
 
 (defun is-on-off? (action)
-  (or (search "on" action)
-      (search "off" action)))
+  (or (equalp "on" action)
+      (equalp "off" action)))
 
 (defun set-all-lights (broker state)
   (loop for name in '("cuisine"
@@ -371,7 +371,7 @@
   (let* ((action (jv payload :action))
          (name (topic->object-name topic))
          (light (format nil "z2m/light-~A" name))
-         (light-state (search "on" action)))
+         (light-state (equalp "on" action)))
 
     (cond
       ((is-brightness-up? action)
