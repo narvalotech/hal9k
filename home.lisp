@@ -292,6 +292,21 @@
       ((search "/get" topic)
        (publish-temp *broker* name (if temp temp 0))))))
 
+(defun publish-enable (broker name)
+  (let ((enable (if (search "bureau" name)
+                    *enable-office*
+                    t)))
+    (mqtt:publish broker
+                  (format nil "z2m/cached/enable-~A" name)
+                  (format nil "~A" (if enable "ON" "OFF")))))
+
+(defun app-handle-cached/enable (topic payload)
+  (declare (ignore payload))
+  (let ((name (topic->object-name topic)))
+    (cond
+      ((search "/get" topic)
+       (publish-enable *broker* name)))))
+
 (defun app-handle-temp (topic payload)
   "React to a temperature sensor value"
   (let* ((name (topic->object-name topic))
