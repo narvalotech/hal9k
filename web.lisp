@@ -158,17 +158,27 @@
                                   (format nil "z2m/cached/temp-~A" name)
                                   #'filter-publish)))))
 
+(defun get-enable-value (name)
+  (string-downcase
+   (mqtt:ascii->string
+    (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+      (mqtt:publish-with-response broker
+                                  (format nil "z2m/cached/enable-~A/get" name) "0"
+                                  (format nil "z2m/cached/enable-~A" name)
+                                  #'filter-publish)))))
+
 ;; maybe a slider + value display would be better?
-(defun render-heater (name)
+(defun render-heater (name &optional enable-button)
   (spinneret:with-html-string
     (:div :class "control heat" :data-name name
           (:span :class "label heat" name)
           (:span :class "current-temperature"
                  (format nil "~2,1F" (get-temp-value name)))
-          (:button :class "switch heat" :data-state "on"
-                   :name "heat"
-                   (:raw *svg-heat-on*)
-                   (:raw *svg-heat-off*))
+          (when enable-button
+            (:button :class "switch heat" :data-state (get-enable-value name)
+                     :name "heat"
+                     (:raw *svg-heat-on*)
+                     (:raw *svg-heat-off*)))
           (:input :type :number
                   :class "num-input"
                   :inputmode :numeric
@@ -191,10 +201,10 @@
                   (then (lambda (response) (ps:@ response json)))
                   (then (lambda (data) (ps:@ console (log data)))))))
 
-    (defun toggle-display-style (img-on img-off current-state)
-      (let ((on (equal current-state "on")))
-        (setf (ps:@ img-on style display) (if on "none" "block"))
-        (setf (ps:@ img-off style display) (if on "block" "none"))))
+    (defun set-display-style (img-on img-off new-state)
+      (let ((state (equal new-state "on")))
+        (setf (ps:@ img-on style display) (if state "block" "none"))
+        (setf (ps:@ img-off style display) (if state "none" "block"))))
 
     (defun toggle-state (data)
       (if (equal (ps:@ data state) "on")
@@ -208,8 +218,8 @@
         (t (error "not supported"))))
 
     (defun button-event-listener (img-on img-off type name data)
-      (toggle-display-style img-on img-off (ps:@ data state))
       (toggle-state data)
+      (set-display-style img-on img-off (ps:@ data state))
       (send-put-request (get-endpoint type) "button" name (ps:@ data state)))
 
     (defun setup-event-listener (element-class event setup-fn)
@@ -238,6 +248,15 @@
                                (ps:@ button parent-node dataset name)
                                (ps:@ button dataset)))))
 
+    (defun initialize-switch-states ()
+      (let ((elements (ps:chain document (get-elements-by-class-name "switch"))))
+        (loop for element across elements
+              do (set-display-style
+                  (ps:chain element (query-selector "svg.on"))
+                  (ps:chain element (query-selector "svg.off"))
+                  (ps:@ element dataset state)))))
+
+    (initialize-switch-states)
     (setup-event-listeners)))
 
 (defparameter stylesheet.css
@@ -406,7 +425,7 @@
         (render-light "cuisine"))
        (render-control-group
         "HEAT"
-        (render-heater "bureau")
+        (render-heater "bureau" t)
         (render-heater "chambre")
         (render-heater "rachel"))))
      (:script (:raw main.js)))))
@@ -454,4 +473,5 @@ sbcl --script /home/john/hal9k/web.lisp
 
 ;; TODO:
 ;; - add "force" heater button
-;; - show current temperature
+;; - find out what crashes the webapp
+;; - add feedback to thermostat selector
