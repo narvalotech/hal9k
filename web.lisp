@@ -185,7 +185,10 @@
 ;; maybe a slider + value display would be better?
 (defun render-heater (name &optional enable-button)
   (spinneret:with-html-string
-    (:div :class "control heat" :data-name name
+    (:div :class (if enable-button
+                   "control heat with-switch"
+                   "control heat")
+          :data-name name
           (:span :class "label heat" name)
           (:span :class "current-temperature"
                  (format nil "~2,1F" (get-temp-value name)))
@@ -286,7 +289,7 @@
      :--accent-color "var(--orange_3)")
 
    '(::selection
-     :background-color "color-mix(in hsl, var(--accent-color) 50%, transparent))")
+     :background-color "color-mix(in hsl, var(--accent-color) 50%, transparent)")
 
    '(:media "(prefers-color-scheme: no-preference)"
      (::root
@@ -333,6 +336,10 @@
      :flex-direction "column"
      :align-items "center")
 
+   '(:media "screen and (orientation:landscape)"
+     (.controls
+      :max-width "40vw"))
+
    '(.control-group
      :width "90%"
      :min-width "25vw"
@@ -354,15 +361,28 @@
 
    '(.control
      :width "100%"
-     :display "flex"
-     :align-items "center"
+     :display "grid"
+     :grid-template-columns "repeat(6, 1fr)"
+     :gap "1rem"
      :margin-bottom "1rem")
 
+   '(.control.light
+     :grid-template-areas "\"label label switch slider slider slider\"")
+
+   '(.control.heat
+     :grid-template-areas "\"label label . temp num num\"")
+
+   '(.control.heat.with-switch
+     :grid-template-areas "\"label label switch temp num num\"")
+
    '((.control > .label)
-     :width "30%"
-     :text-align "right")
+     :grid-area "label"
+     :display "flex"
+     :justify-content "left"
+     :align-items "center")
 
    '(.switch
+     :grid-area "switch"
      :width "2.5rem"
      :height "2.5rem"
      :align-items "center"
@@ -384,7 +404,7 @@
      :opacity "50%")
 
    '(.slider
-     :width "50%"
+     :grid-area "slider"
      :outline "none")
 
    '((:and .slider :hover)
@@ -397,11 +417,13 @@
      :accent-color "var(--foreground)")
 
    '(.current-temperature
-     :width "20%"
-     :text-align "center")
+     :grid-area "temp"
+     :display "flex"
+     :justify-content "center"
+     :align-items "center")
 
    '(.num-input
-     :width "50%"
+     :grid-area "num"
      :border "none"
      :background "none"
      :border-bottom "0.2em solid var(--accent-color)"
