@@ -251,7 +251,8 @@
                             (lambda (element)
                               (send-put-request url input-type
                                                 (ps:@ element parent-node dataset name)
-                                                (ps:@ element value)))))
+                                                (ps:@ element value))
+                              (ps:chain element (blur)))))
 
     (defun setup-event-listeners ()
       (setup-change-event-listener "num-input" "/heat" "number")
