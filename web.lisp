@@ -432,27 +432,30 @@
 
 ;; (format t "~A" (controls))
 
+(defun handle-put (env)
+  ;; TODO: err status code when MQTT send fails
+  (let* ((stream (getf env :raw-body))
+         (payload (read-line stream)))
+
+    (format t "=> payload: ~A~%" payload)
+
+    (when (equal (getf env :request-uri) "/heat")
+      (handle-heat payload))
+
+    (when (equal (getf env :request-uri) "/light")
+      (handle-light payload)))
+
+  (list 200 '(:content-type "text/html") ""))
+
 (defun response (env)
   ;; (format t "env: ~A~%" env)
 
-  (when (equal (getf env :request-method) :PUT)
-    (let* ((stream (getf env :raw-body))
-           (payload (read-line stream)))
-
-      (format t "=> payload: ~A~%" payload)
-
-      (when (equal (getf env :request-uri) "/heat")
-        (handle-heat payload))
-
-      (when (equal (getf env :request-uri) "/light")
-        (handle-light payload))))
-
-  ;; TODO: read current values from MQTT
-
   ;; Response:
   ;; [status code] [headers (plist)] [body (strings / vector / pathname)]
-  ;; TODO: err status code when MQTT send fails
-  (list 200 '(:content-type "text/html") (list (controls))))
+
+  (case (getf env :request-method)
+    (:PUT (handle-put env))
+    (t (list 200 '(:content-type "text/html") (list (controls))))))
 
 (format t "Starting webserver~%")
 
