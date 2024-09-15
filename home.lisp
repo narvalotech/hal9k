@@ -339,13 +339,13 @@
     (cond
       ((> temp (+ therm delta))
         (progn
-          (format t "[~A]: ~A > ~A -> heater [~A] OFF"
+          (format t "[~A]: ~A > ~A -> heater [~A] OFF~%"
                   name temp therm heater)
           (set-state *broker* heater nil)))
 
       ((< temp (- therm delta))
         (progn
-          (format t "[~A]: ~A < ~A -> heater [~A] ON"
+          (format t "[~A]: ~A < ~A -> heater [~A] ON~%"
                   name temp therm heater)
           (set-state *broker* heater t)))))))
 
