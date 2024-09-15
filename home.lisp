@@ -268,7 +268,7 @@
  ; => NIL
 
 (defparameter *enable-office* t)
-(defparameter *force-office* t)
+(defparameter *force-office* nil)
 
 (defparameter *temperatures* (make-hash-table :test 'equalp))
 
