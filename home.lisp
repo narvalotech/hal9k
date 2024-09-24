@@ -334,20 +334,20 @@
         (when (or (not *enable-office*)
                   (outside-working-hours? (time:now)))
           (set-state *broker* heater nil)
-          (return-from app-handle-temp nil)))
+          (return-from app-handle-temp nil))))
 
     (cond
       ((> temp (+ therm delta))
-        (progn
-          (format t "[~A]: ~A > ~A -> heater [~A] OFF~%"
-                  name temp therm heater)
-          (set-state *broker* heater nil)))
+       (progn
+         (format t "[~A]: ~A > ~A -> heater [~A] OFF~%"
+                 name temp therm heater)
+         (set-state *broker* heater nil)))
 
       ((< temp (- therm delta))
-        (progn
-          (format t "[~A]: ~A < ~A -> heater [~A] ON~%"
-                  name temp therm heater)
-          (set-state *broker* heater t)))))))
+       (progn
+         (format t "[~A]: ~A < ~A -> heater [~A] ON~%"
+                 name temp therm heater)
+         (set-state *broker* heater t))))))
 
 (defun app-handle-enable (topic payload)
   "Enable a space heater"
