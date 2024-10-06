@@ -421,8 +421,9 @@
         (render-light "chambre")
         (render-light "couloir")
         (render-light "entree")
+        (render-light "cuisine")
         (render-light "manger")
-        (render-light "cuisine"))
+        (render-light "chonk"))
        (render-control-group
         "HEAT"
         (render-heater "bureau" t)
