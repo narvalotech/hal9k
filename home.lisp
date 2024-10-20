@@ -388,18 +388,23 @@
          (light (format nil "z2m/light-~A" name))
          (light-state (equalp "on" action)))
 
-    (cond
-      ((is-brightness-up? action)
-       (set-brightness *broker* light 255))
-
-      ((is-brightness-down? action)
-       (set-brightness *broker* light 20))
-
-      ((is-on-off? action)
-       (if (search "cuisine" topic)
-           ;; special case: "cuisine" controls all the lights
-           (set-all-lights *broker* light-state)
-           ;; other switches control their respective light
+    (if (search "cuisine" topic)
+        ;; special case: "cuisine" controls all the lights
+        ;; long-presses turn on/off the big halogen light
+        (cond
+          ((is-brightness-up? action)
+           (set-state *broker* "z2m/light-chonk" t))
+          ((is-brightness-down? action)
+           (set-state *broker* "z2m/light-chonk" nil))
+          ((is-on-off? action)
+           (set-all-lights *broker* light-state)))
+        ;; Other switches control their respective lights
+        (cond
+          ((is-brightness-up? action)
+           (set-brightness *broker* light 255))
+          ((is-brightness-down? action)
+           (set-brightness *broker* light 20))
+          ((is-on-off? action)
            (set-state *broker* light light-state))))))
 
 (defun make-switch-payload (action-string)
