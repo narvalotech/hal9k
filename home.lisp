@@ -212,6 +212,7 @@
 (set-thermostat-value "bureau" 19)
 (set-thermostat-value "chambre" 21)
 (set-thermostat-value "rachel" 21)
+(set-thermostat-value "salon" 20)
 ; New thermostat for rachel: 21
 ;  => 21 (5 bits, #x15, #o25, #b10101)
 

@@ -428,6 +428,7 @@
         "HEAT"
         (render-heater "bureau" t)
         (render-heater "chambre")
+        (render-heater "salon")
         (render-heater "rachel"))))
      (:script (:raw main.js)))))
 
