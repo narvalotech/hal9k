@@ -446,7 +446,7 @@
     (when (equal (getf env :request-uri) "/light")
       (handle-light payload)))
 
-  (list 200 '(:content-type "text/html") ""))
+  (list 200 '(:content-type "text/html") '("")))
 
 (defun response (env)
   ;; (format t "env: ~A~%" env)
