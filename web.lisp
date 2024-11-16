@@ -1,6 +1,9 @@
 (require :asdf)
 
-(push "/home/john/hal9k/" ql:*local-project-directories*)
+(defparameter *offline* nil)
+
+;; uncomment this to run without MQTT
+;; (defparameter *offline* t)
 
 (ql:quickload :alexandria)
 
@@ -15,8 +18,19 @@
 
 ;; To decode/encode the MQTT payloads
 (ql:quickload :cl-json)
+
 ;; To talk to MQTT (obv)
-(ql:quickload :cl-mqtt)
+(unless *offline*
+
+  (ql:quickload :cl-mqtt))
+
+(when *offline*
+  (defpackage :mqtt
+    (:export
+     #:ascii->string
+     #:publish
+     #:publish-with-response
+     #:with-broker)))
 
 (defun decode-type/name/value (payload)
   (let ((decoded (json:decode-json-from-string payload)))
@@ -31,12 +45,10 @@
 (defparameter *client-id* (gen-random-id))
 
 (defun publish (topic value)
-  (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str *client-id*)
-    (format t "############# PUBLISH: [~A] ~A~%" topic value)
-    (mqtt:publish broker topic value)))
-
-;; (defun publish (topic value)
-;;   (format t "############# PUBLISH: [~A] ~A~%" topic value))
+  (format t "############# PUBLISH: [~A] ~A~%" topic value)
+  (unless *offline*
+      (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str *client-id*)
+        (mqtt:publish broker topic value))))
 
 (defun toggle-light (name)
   ;; TODO: return new state
@@ -141,31 +153,34 @@
       (:publish t))))
 
 (defun get-thermostat-value (name)
-  (read-from-string
-   (mqtt:ascii->string
-    (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
-      (mqtt:publish-with-response broker
-                                  (format nil "z2m/therm-~A/get" name) "0"
-                                  (format nil "z2m/therm-~A" name)
-                                  #'filter-publish)))))
+  (if *offline* 20
+      (read-from-string
+       (mqtt:ascii->string
+        (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+          (mqtt:publish-with-response broker
+                                      (format nil "z2m/therm-~A/get" name) "0"
+                                      (format nil "z2m/therm-~A" name)
+                                      #'filter-publish))))))
 
 (defun get-temp-value (name)
-  (read-from-string
-   (mqtt:ascii->string
-    (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
-      (mqtt:publish-with-response broker
-                                  (format nil "z2m/cached/temp-~A/get" name) "0"
-                                  (format nil "z2m/cached/temp-~A" name)
-                                  #'filter-publish)))))
+  (if *offline* 20
+      (read-from-string
+       (mqtt:ascii->string
+        (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+          (mqtt:publish-with-response broker
+                                      (format nil "z2m/cached/temp-~A/get" name) "0"
+                                      (format nil "z2m/cached/temp-~A" name)
+                                      #'filter-publish))))))
 
 (defun get-enable-value (name)
-  (string-downcase
-   (mqtt:ascii->string
-    (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
-      (mqtt:publish-with-response broker
-                                  (format nil "z2m/cached/enable-~A/get" name) "0"
-                                  (format nil "z2m/cached/enable-~A" name)
-                                  #'filter-publish)))))
+  (if *offline* "off"
+      (string-downcase
+       (mqtt:ascii->string
+        (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
+          (mqtt:publish-with-response broker
+                                      (format nil "z2m/cached/enable-~A/get" name) "0"
+                                      (format nil "z2m/cached/enable-~A" name)
+                                      #'filter-publish))))))
 
 ;; maybe a slider + value display would be better?
 (defun render-heater (name &optional enable-button)
@@ -464,17 +479,7 @@
 (defvar *handler*
   (clack:clackup 'response :address "0.0.0.0"))
 
-(format t "Hit enter to stop the server~%")
-(read-line)
-
-(clack:stop *handler*)
-(format t "Stopped~%")
-
-#|
-;; How to install deps and run
-sbcl --script /home/john/hal9k/web.lisp
-
-|#
+;; (clack:stop *handler*)
 
 ;; TODO:
 ;; - add "force" heater button
