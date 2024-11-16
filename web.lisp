@@ -418,12 +418,12 @@
       (:raw
        (render-control-group
         "LIGHT"
-        (render-light "chambre")
         (render-light "couloir")
         (render-light "entree")
         (render-light "cuisine")
         (render-light "manger")
-        (render-light "chonk"))
+        (render-light "chonk")
+        (render-light "chambre"))
        (render-control-group
         "HEAT"
         (render-heater "bureau" t)
