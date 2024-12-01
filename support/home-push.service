@@ -1,0 +1,16 @@
+[Unit]
+Description=Run push.lisp script at boot
+After=multi-user.target
+
+[Service]
+Type=simple
+User=john
+WorkingDirectory=/home/john/hal9k
+ExecStart=/home/john/hal9k/support/push.sh
+Restart=always
+RestartSec=2s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
