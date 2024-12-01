@@ -389,24 +389,34 @@
          (light (format nil "z2m/light-~A" name))
          (light-state (equalp "on" action)))
 
-    (if (search "cuisine" topic)
-        ;; special case: "cuisine" controls all the lights
-        ;; long-presses turn on/off the big halogen light
-        (cond
-          ((is-brightness-up? action)
-           (set-state *broker* "z2m/light-chonk" t))
-          ((is-brightness-down? action)
-           (set-state *broker* "z2m/light-chonk" nil))
-          ((is-on-off? action)
-           (set-all-lights *broker* light-state)))
-        ;; Other switches control their respective lights
-        (cond
-          ((is-brightness-up? action)
-           (set-brightness *broker* light 255))
-          ((is-brightness-down? action)
-           (set-brightness *broker* light 20))
-          ((is-on-off? action)
-           (set-state *broker* light light-state))))))
+    (cond
+      ((search "cuisine" topic)
+       ;; special case: "cuisine" controls all the lights
+       ;; long-presses turn on/off the big halogen light
+       (cond
+         ((is-brightness-up? action)
+          (set-state *broker* "z2m/light-chonk" t))
+         ((is-brightness-down? action)
+          (set-state *broker* "z2m/light-chonk" nil))
+         ((is-on-off? action)
+          (set-all-lights *broker* light-state))))
+      ((search "couloir" topic)
+       (cond
+         ((is-brightness-up? action)
+          (set-state *broker* "z2m/light-entree" t))
+         ((is-brightness-down? action)
+          (set-state *broker* "z2m/light-entree" nil))
+         ((is-on-off? action)
+          (set-state *broker* light light-state))))
+      ;; Other switches control their respective lights
+      (t
+       (cond
+         ((is-brightness-up? action)
+          (set-brightness *broker* light 255))
+         ((is-brightness-down? action)
+          (set-brightness *broker* light 20))
+         ((is-on-off? action)
+          (set-state *broker* light light-state)))))))
 
 (defun make-switch-payload (action-string)
   (json:encode-json-to-string
