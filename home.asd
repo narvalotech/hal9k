@@ -2,7 +2,7 @@
   :description "home: manages the lights and space heaters"
   :version "0.0.1"
   :author "Jonathan Rico <jonathan@rico.live>"
-  :depends-on ("cl-mqtt" "cl-json" "local-time" "slynk")
+  :depends-on ("cl-mqtt" "cl-json" "local-time" "slynk" "trivial-timer" "bordeaux-threads")
   :components ((:file "home"))
   :in-order-to ((test-op (test-op "home/tests"))))
 

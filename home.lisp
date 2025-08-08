@@ -9,14 +9,11 @@
 (require :cl-json)
 (require :local-time)
 (require :cl-mqtt)
+(require :trivial-timer)
+(require :bordeaux-threads)
 
 (defpackage :home
   (:use :common-lisp)
-
-  (:import-from :sb-sys
-                #:make-timer
-                #:schedule-timer
-                #:unschedule-timer)
 
   (:import-from :cl-mqtt
                 #:string->ascii
@@ -38,15 +35,29 @@
           (if (equal (car el) key) (return (cdr el))))))
 
 ;; -------------- Framework code --------------
+(defparameter *timer* nil)
+
 (defun init-timer (fn)
-  (make-timer fn :thread t))
+  (trivial-timer:initialize-timer)
+  (setf *timer*
+        (list nil fn)))
 
 (defun reset-timer (timer interval)
-  (unschedule-timer timer)
-  (schedule-timer timer interval))
+  (declare (ignore timer))
+  (destructuring-bind (id fn) *timer*
+    (when id
+      (trivial-timer:cancel-timer-call id))
+    (setf *timer*
+          (list
+           (trivial-timer:register-timer-call (floor (* 1000 interval)) fn)
+           fn))))
 
 (defun stop-timer (timer)
-  (unschedule-timer timer))
+  (declare (ignore timer))
+  (destructuring-bind (id fn) *timer*
+    (declare (ignore fn))
+    (when id
+      (trivial-timer:cancel-timer-call id))))
 
 ;; This will print to stdout after ~.2s
 (let ((timer
@@ -96,8 +107,10 @@
 
 (defun app-handle-default (topic payload)
   "Fallback handler for MQTT messages"
-  (format *error-output* "No handler: [topic] ~A [message] ~A~%"
-          topic payload))
+  (declare (ignore topic payload))
+  nil)
+  ;; (format *error-output* "No handler: [topic] ~A [message] ~A~%"
+  ;;         topic payload))
 
 (defun null-route (topic payload)
   ;; (format t "discarding: ~A~%" payload)
@@ -446,29 +459,37 @@
 
 (format t "Done eval-ing~%")
 
+;; ccl --eval '(ql:quickload :slynk)' --eval '(slynk:create-server :port 42069 :dont-close t)'
+
 (defun slynk-listener-thread-p (thread)
   "Check if the given thread is a Slynk listener thread."
-  (let ((thread-name (sb-thread:thread-name thread)))
+  (let ((thread-name (bt:thread-name thread)))
     (format t "thread: ~A~%" thread-name)
     (and thread-name
          (search "slynk" thread-name :test #'equalp))))
 
 (defun slynk-server-running-p ()
   "Check if there is any active Slynk listener thread."
-  (some #'slynk-listener-thread-p (sb-thread:list-all-threads)))
+  t)
+  ;; (some #'slynk-listener-thread-p (bt:all-threads)))
+
+;; (defparameter *home-server* "192.168.10.150")
+(defparameter *home-server* "192.168.10.175")
 
 (defun main ()
   (unless (slynk-server-running-p)
     (format t "Starting SLYNK server~%")
-    (slynk:create-server :port 42069 :dont-close t))
+    (slynk:create-server :port 42169 :dont-close t))
 
-  (handler-case (mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
+  (handler-case (mqtt:connect-to-broker *home-server* 1883 #'app-callback)
     ;; Catch a user's C-c
     (#+sbcl sb-sys:interactive-interrupt
+     #+ccl ccl:interrupt-signal-condition
       () (progn
            (format *error-output* "Caught interrupt, aborting~%")
            (uiop:quit)))
-    (error (c) (format t "Unknown error occured:~&~a~&" c))))
+    (error (c) (progn (format t "Unknown error occured:~&~a~&" c)
+                      (uiop:quit)))))
 
 #|
 ;; Bootstrap quicklisp:
@@ -489,5 +510,13 @@ sbcl --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
      --eval '(ql:quickload "home")' \
      --eval "(in-package :home)" \
      --eval "(main)"
+
+ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+     --eval '(ql:quickload "home")' \
+     --eval "(in-package :home)" \
+     --eval "(main)"
+
+ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+     --load hal9k/web.lisp
 
 |#

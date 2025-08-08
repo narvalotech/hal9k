@@ -1,6 +1,12 @@
+(push :HUNCHENTOOT-NO-SSL *features*)
+(push :WOO-NO-SSL *features*)
+
 (require :asdf)
 
 (defparameter *offline* nil)
+(defparameter *home-server* "192.168.10.175")
+;; (defparameter *home-server* "192.168.10.150")
+;; (defparameter *home-server* "127.0.0.1")
 
 ;; uncomment this to run without MQTT
 ;; (defparameter *offline* t)
@@ -47,7 +53,7 @@
 (defun publish (topic value)
   (format t "############# PUBLISH: [~A] ~A~%" topic value)
   (unless *offline*
-      (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str *client-id*)
+      (mqtt:with-broker (*home-server* 1883 broker :client-id-str *client-id*)
         (mqtt:publish broker topic value))))
 
 (defun toggle-light (name)
@@ -152,35 +158,32 @@
     (case (first packet)
       (:publish t))))
 
+(defun home-read (topic resp-topic)
+  (mqtt:ascii->string
+   (mqtt:with-broker (*home-server* 1883 broker :client-id-str (gen-random-id))
+     (mqtt:publish-with-response broker
+                                 topic
+                                 "0"
+                                 resp-topic
+                                 #'filter-publish))))
+
 (defun get-thermostat-value (name)
   (if *offline* 20
       (read-from-string
-       (mqtt:ascii->string
-        (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
-          (mqtt:publish-with-response broker
-                                      (format nil "z2m/therm-~A/get" name) "0"
-                                      (format nil "z2m/therm-~A" name)
-                                      #'filter-publish))))))
+       (home-read (format nil "z2m/therm-~A/get" name)
+                  (format nil "z2m/therm-~A" name)))))
 
 (defun get-temp-value (name)
   (if *offline* 20
       (read-from-string
-       (mqtt:ascii->string
-        (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
-          (mqtt:publish-with-response broker
-                                      (format nil "z2m/cached/temp-~A/get" name) "0"
-                                      (format nil "z2m/cached/temp-~A" name)
-                                      #'filter-publish))))))
+       (home-read (format nil "z2m/cached/temp-~A/get" name)
+                  (format nil "z2m/cached/temp-~A" name)))))
 
 (defun get-enable-value (name)
   (if *offline* "off"
       (string-downcase
-       (mqtt:ascii->string
-        (mqtt:with-broker ("192.168.10.175" 1883 broker :client-id-str (gen-random-id))
-          (mqtt:publish-with-response broker
-                                      (format nil "z2m/cached/enable-~A/get" name) "0"
-                                      (format nil "z2m/cached/enable-~A" name)
-                                      #'filter-publish))))))
+       (home-read (format nil "z2m/cached/enable-~A/get" name)
+                  (format nil "z2m/cached/enable-~A" name)))))
 
 ;; maybe a slider + value display would be better?
 (defun render-heater (name &optional enable-button)
@@ -499,8 +502,27 @@
 
 (format t "Starting webserver~%")
 
-(defvar *handler*
-  (clack:clackup 'response :address "0.0.0.0"))
+;; (ql:quickload :woo)
+(defparameter *handler*
+  (clack:clackup #'response
+                 :address "0.0.0.0" :port 5000
+                 :debug nil
+                 :ssl nil
+                 :server :hunchentoot))
+
+;; (defparameter *handler*
+;;   (clack:clackup #'response
+;;                  :address "0.0.0.0" :port 5000
+;;                  :debug nil
+;;                  :ssl nil
+;;                  :server :woo
+;;                  :silent t
+;;                  :use-default-middlewares nil))
+
+;; (handler-case
+;;     (clack:clackup 'response :ssl nil :address "0.0.0.0"
+;;                              :debug nil :use-thread nil)
+;;   (error (e) (format t "AAAAA: ~A~%" e)))
 
 ;; (clack:stop *handler*)
 
@@ -508,3 +530,5 @@
 ;; - add "force" heater button
 ;; - find out what crashes the webapp
 ;; - add feedback to thermostat selector
+
+;; (setf *debugger-hook* (lambda (a b) (uiop:quit)))
