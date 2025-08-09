@@ -473,8 +473,8 @@
   t)
   ;; (some #'slynk-listener-thread-p (bt:all-threads)))
 
-;; (defparameter *home-server* "192.168.10.150")
-(defparameter *home-server* "192.168.10.175")
+(defparameter *home-server* "192.168.10.150")
+;; (defparameter *home-server* "192.168.10.175")
 
 (defun main ()
   (unless (slynk-server-running-p)

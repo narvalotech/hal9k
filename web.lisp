@@ -4,8 +4,8 @@
 (require :asdf)
 
 (defparameter *offline* nil)
-(defparameter *home-server* "192.168.10.175")
-;; (defparameter *home-server* "192.168.10.150")
+;; (defparameter *home-server* "192.168.10.175")
+(defparameter *home-server* "192.168.10.150")
 ;; (defparameter *home-server* "127.0.0.1")
 
 ;; uncomment this to run without MQTT
