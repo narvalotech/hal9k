@@ -5,8 +5,8 @@
 
 (defparameter *offline* nil)
 ;; (defparameter *home-server* "192.168.10.175")
-(defparameter *home-server* "192.168.10.150")
-;; (defparameter *home-server* "127.0.0.1")
+;; (defparameter *home-server* "192.168.10.150")
+(defparameter *home-server* "127.0.0.1")
 
 ;; uncomment this to run without MQTT
 ;; (defparameter *offline* t)
@@ -459,18 +459,14 @@
       (:raw
        (render-control-group
         "LIGHT"
-        (render-light "couloir")
-        (render-light "entree")
-        (render-light "cuisine")
-        (render-light "manger")
+        (render-light "hallway")
+        (render-light "door")
+        (render-light "kitchen")
+        (render-light "livingroom1")
+        (render-light "livingroom2")
         (render-light "chonk")
-        (render-light "chambre"))
-       (render-control-group
-        "HEAT"
-        (render-heater "bureau" t)
-        (render-heater "chambre")
-        (render-heater "salon")
-        (render-heater "rachel"))))
+        (render-light "bedroom"))
+       ))
      (:script (:raw main.js)))))
 
 ;; (format t "~A" (controls))

@@ -388,10 +388,11 @@
       (equalp "off" action)))
 
 (defun set-all-lights (broker state)
-  (loop for name in '("cuisine"
-                      "entree"
-                      "couloir"
-                      "manger")
+  (loop for name in '("kitchen"
+                      "door"
+                      "hallway"
+                      "livingroom1"
+                      "livingroom2")
         do (set-state broker
                       (format nil "z2m/light-~A" name)
                       state)))
@@ -403,7 +404,7 @@
          (light-state (equalp "on" action)))
 
     (cond
-      ((search "cuisine" topic)
+      ((search "kitchen" topic)
        ;; special case: "cuisine" controls all the lights
        ;; long-presses turn on/off the big halogen light
        (cond
@@ -413,12 +414,12 @@
           (set-state *broker* "z2m/light-chonk" nil))
          ((is-on-off? action)
           (set-all-lights *broker* light-state))))
-      ((search "couloir" topic)
+      ((search "hallway" topic)
        (cond
          ((is-brightness-up? action)
-          (set-state *broker* "z2m/light-entree" t))
+          (set-state *broker* "z2m/light-door" t))
          ((is-brightness-down? action)
-          (set-state *broker* "z2m/light-entree" nil))
+          (set-state *broker* "z2m/light-door" nil))
          ((is-on-off? action)
           (set-state *broker* light light-state))))
       ;; Other switches control their respective lights
@@ -443,14 +444,14 @@
 
 (defparameter *door-timer*
   (init-timer
-   (lambda () (set-state *broker* "z2m/light-entree" nil))))
+   (lambda () (set-state *broker* "z2m/light-door" nil))))
 
 (defparameter *door-timeout* (* 60 5))
 
 (defun app-handle-door (topic payload)
   (declare (ignore topic))
   (let ((door-open (not (jv payload :contact)))
-        (light (format nil "z2m/light-entree")))
+        (light (format nil "z2m/light-door")))
     (when door-open
       ;; turn on the light
       (set-state *broker* light t)
@@ -473,7 +474,8 @@
   t)
   ;; (some #'slynk-listener-thread-p (bt:all-threads)))
 
-(defparameter *home-server* "192.168.10.150")
+(defparameter *home-server* "127.0.0.1")
+;; (defparameter *home-server* "192.168.10.150")
 ;; (defparameter *home-server* "192.168.10.175")
 
 (defun main ()
