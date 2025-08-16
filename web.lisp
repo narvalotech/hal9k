@@ -496,15 +496,30 @@
     (:PUT (handle-put env))
     (t (list 200 '(:content-type "text/html") (list (controls))))))
 
-(format t "Starting webserver~%")
-
 ;; (ql:quickload :woo)
-(defparameter *handler*
-  (clack:clackup #'response
-                 :address "0.0.0.0" :port 5000
-                 :debug nil
-                 :ssl nil
-                 :server :hunchentoot))
+(defparameter *run-loop* t)
+
+(defun entrypoint ()
+  (let ((handler))
+    (setf handler
+          (clack:clackup #'response
+                         :address "0.0.0.0" :port 5000
+                         :debug nil
+                         :ssl nil
+                         :server :hunchentoot))
+
+    (format t "Started webserver (~A)~%" handler)
+
+    (handler-case (loop while *run-loop* do (sleep 100))
+      ;; Catch a user's C-c
+      (#+sbcl sb-sys:interactive-interrupt
+       #+ccl ccl:interrupt-signal-condition
+       () (progn
+            (format *error-output* "Caught interrupt, aborting~%")
+            (uiop:quit)))
+      (error (c) (progn (format t "Unknown error occured:~&~a~&" c)
+                        (uiop:quit))))
+    ))
 
 ;; (defparameter *handler*
 ;;   (clack:clackup #'response
@@ -528,3 +543,15 @@
 ;; - add feedback to thermostat selector
 
 ;; (setf *debugger-hook* (lambda (a b) (uiop:quit)))
+
+;; (compile-file "web.lisp")
+;; (asdf:initialize-source-registry
+;;   `(:source-registry
+;;      :inherit-configuration
+;;      (:directory ,(uiop:getenv-absolute-directory "."))))
+
+;; (asdf:operate 'asdf:monolithic-compile-bundle-op "web.lisp")
+
+;; (uiop:dump-image )
+(setf uiop:*image-entry-point* #'entrypoint)
+(uiop:dump-image "web.exe" :executable t)

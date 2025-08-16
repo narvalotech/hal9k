@@ -518,7 +518,13 @@ ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
      --eval "(in-package :home)" \
      --eval "(main)"
 
-ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
-     --load hal9k/web.lisp
+ccl -b --load ~/quicklisp/setup.lisp \
+     --eval '(push "/home/jon/hal9k/" ql:*local-project-directories*)' \
+     --load web.lisp
+
+ccl -b --load ~/quicklisp/setup.lisp \
+     --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+     --load web.lisp
 
 |#
+
