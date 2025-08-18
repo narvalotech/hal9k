@@ -2,7 +2,4 @@
 
 set -eu
 
-/usr/bin/ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
-     --eval '(ql:quickload "home")' \
-     --eval "(in-package :home)" \
-     --eval "(main)"
+/usr/bin/ccl -b --load /home/john/hal9k/home.exe

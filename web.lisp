@@ -499,7 +499,7 @@
 ;; (ql:quickload :woo)
 (defparameter *run-loop* t)
 
-(defun entrypoint ()
+(defun main ()
   (let ((handler))
     (setf handler
           (clack:clackup #'response
@@ -552,6 +552,7 @@
 
 ;; (asdf:operate 'asdf:monolithic-compile-bundle-op "web.lisp")
 
-;; (uiop:dump-image )
-(setf uiop:*image-entry-point* #'entrypoint)
-(uiop:dump-image "web.exe" :executable t)
+(defun build-app (name)
+  (setf uiop:*image-entry-point* #'main)
+  (uiop:dump-image name :executable t)
+  (format t "~%Done building ~A~%" name))

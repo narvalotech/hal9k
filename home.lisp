@@ -493,6 +493,11 @@
     (error (c) (progn (format t "Unknown error occured:~&~a~&" c)
                       (uiop:quit)))))
 
+(defun build-app (name)
+  (setf uiop:*image-entry-point* #'main)
+  (uiop:dump-image name :executable t)
+  (format t "~%Done building ~A~%" name))
+
 #|
 ;; Bootstrap quicklisp:
 
@@ -527,4 +532,3 @@ ccl -b --load ~/quicklisp/setup.lisp \
      --load web.lisp
 
 |#
-
