@@ -464,7 +464,6 @@
         (render-light "kitchen")
         (render-light "livingroom1")
         (render-light "livingroom2")
-        (render-light "chonk")
         (render-light "bedroom"))
        ))
      (:script (:raw main.js)))))
