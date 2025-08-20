@@ -60,11 +60,11 @@
       (trivial-timer:cancel-timer-call id))))
 
 ;; This will print to stdout after ~.2s
-(let ((timer
-        (init-timer (lambda () (format t "Hello timer~%")))))
-  (reset-timer timer 4)
-  (sleep .1)
-  (reset-timer timer .2))
+;; (let ((timer
+;;         (init-timer (lambda () (format t "Hello timer~%")))))
+;;   (reset-timer timer 4)
+;;   (sleep .1)
+;;   (reset-timer timer .2))
 
 (defun string->number (input)
   ;; FIXME Unsafe AF
@@ -109,6 +109,9 @@
   "Fallback handler for MQTT messages"
   (declare (ignore topic payload))
   nil)
+  ;; (push
+  ;;  (list :topic topic :payload payload)
+  ;;  *unknowns*)
   ;; (format *error-output* "No handler: [topic] ~A [message] ~A~%"
   ;;         topic payload))
 
@@ -387,12 +390,45 @@
   (or (equalp "on" action)
       (equalp "off" action)))
 
+;; TODO: put bedroom at end of list
+(defparameter *stationary-lights* '("door" "hallway" "kitchen" "bedroom"))
+(defparameter *all-lights* *stationary-lights*)
+
+(defun update-active-lights (lights)
+  (setf *all-lights*
+        (remove-duplicates (append *stationary-lights* lights)
+                           :from-end t
+                           :test #'equalp)))
+
+(defun extract-friendly-name (device)
+  (cdr (assoc :friendly--name device)))
+
+(defun extract-light-name (str)
+  (subseq str (+ 1 (search "-" str))))
+
+(defun store-lights (devices-json)
+  (let ((lights (remove-if-not
+                 (lambda (x) (search "light-" (extract-friendly-name x)))
+                 (json:decode-json-from-string devices-json))))
+    (update-active-lights
+     (mapcar (lambda (x) (extract-light-name
+                          (extract-friendly-name x)))
+             lights))))
+
+(defun app-handle-bridge/devices (topic payload)
+  (store-lights payload))
+
+(defun app-handle-cached/lights/get (topic payload)
+  (declare (ignore topic payload))
+  (mqtt:publish *broker*
+                (format nil "z2m/cached/lights")
+                (format nil "~A" *all-lights*)))
+
+(defun app-handle-cached/lights (topic payload)
+  (null-route topic payload))
+
 (defun set-all-lights (broker state)
-  (loop for name in '("kitchen"
-                      "door"
-                      "hallway"
-                      "livingroom1"
-                      "livingroom2")
+  (loop for name in *all-lights*
         do (set-state broker
                       (format nil "z2m/light-~A" name)
                       state)))
@@ -404,16 +440,16 @@
          (light-state (equalp "on" action)))
 
     (cond
-      ((search "kitchen" topic)
-       ;; special case: "cuisine" controls all the lights
-       ;; long-presses turn on/off the big halogen light
-       (cond
-         ((is-brightness-up? action)
-          (set-state *broker* "z2m/light-chonk" t))
-         ((is-brightness-down? action)
-          (set-state *broker* "z2m/light-chonk" nil))
-         ((is-on-off? action)
-          (set-all-lights *broker* light-state))))
+      ;; ((search "kitchen" topic)
+      ;;  ;; special case: "cuisine" controls all the lights
+      ;;  ;; long-presses turn on/off the big halogen light
+      ;;  (cond
+      ;;    ((is-brightness-up? action)
+      ;;     (set-state *broker* "z2m/light-chonk" t))
+      ;;    ((is-brightness-down? action)
+      ;;     (set-state *broker* "z2m/light-chonk" nil))
+      ;;    ((is-on-off? action)
+      ;;     (set-all-lights *broker* light-state))))
       ((search "hallway" topic)
        (cond
          ((is-brightness-up? action)

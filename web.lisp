@@ -185,6 +185,12 @@
        (home-read (format nil "z2m/cached/enable-~A/get" name)
                   (format nil "z2m/cached/enable-~A" name)))))
 
+(defun get-lights-list ()
+  (if *offline* '("test-1" "test-2")
+      (read-from-string
+       (home-read (format nil "z2m/cached/lights/get")
+                  (format nil "z2m/cached/lights")))))
+
 ;; maybe a slider + value display would be better?
 (defun render-heater (name &optional enable-button)
   (spinneret:with-html-string
@@ -447,6 +453,16 @@
 
    ))
 
+(defun enumerate-lights ()
+  (mapcar (lambda (x) (format nil "~(~A~)" x))
+          (get-lights-list)))
+
+;; (enumerate-lights)
+ ; => ("door" "hallway" "kitchen" "bedroom" "livingroom1" "livingroom2")
+
+;; (get-lights-list)
+ ; => (DOOR HALLWAY KITCHEN BEDROOM LIVINGROOM1 LIVINGROOM2), 54
+
 (defun controls ()
   (spinneret:with-html-string
     (:doctype)
@@ -459,12 +475,9 @@
       (:raw
        (render-control-group
         "LIGHT"
-        (render-light "hallway")
-        (render-light "door")
-        (render-light "kitchen")
-        (render-light "livingroom1")
-        (render-light "livingroom2")
-        (render-light "bedroom"))
+        (with-output-to-string (stream)
+          (loop for name in (enumerate-lights) do
+            (write-string (render-light name) stream))))
        ))
      (:script (:raw main.js)))))
 
