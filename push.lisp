@@ -61,7 +61,7 @@
             (mqtt:parse-packets (coerce data 'list)))))
 
 (defun main ()
-  (handler-case (mqtt:connect-to-broker "192.168.10.175" 1883 #'app-callback)
+  (handler-case (mqtt:connect-to-broker "127.0.0.1" 1883 #'app-callback)
     ;; Catch a user's C-c
     (#+sbcl sb-sys:interactive-interrupt
       () (progn

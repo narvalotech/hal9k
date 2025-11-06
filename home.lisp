@@ -391,7 +391,7 @@
       (equalp "off" action)))
 
 ;; TODO: put bedroom at end of list
-(defparameter *stationary-lights* '("door" "hallway" "kitchen" "bedroom"))
+(defparameter *stationary-lights* '())
 (defparameter *all-lights* *stationary-lights*)
 
 (defun update-active-lights (lights)
