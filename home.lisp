@@ -342,17 +342,6 @@
 
     (cache-temp name temp)
 
-    ;; Office is special:
-    ;; - it operates only during working hours
-    ;; - it can be disabled entirely
-    ;; - this special handling can also be disabled
-    (when (search "bureau" name)
-      (when (not *force-office*)
-        (when (or (not *enable-office*)
-                  (outside-working-hours? (time:now)))
-          (set-state *broker* heater nil)
-          (return-from app-handle-temp nil))))
-
     (cond
       ((> temp (+ therm delta))
        (progn
