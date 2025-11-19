@@ -25,7 +25,8 @@
 (defun log-temperature (topic payload)
   "Log a temperature sensor value"
   (let ((name (topic->object-name topic))
-        (temp (jv payload :temperature)))
+        (temp (jv payload :temperature))
+        (humd (jv payload :humidity)))
 
     (unless temp
       (format t "Unknown format: [~A] ~A~%"
@@ -33,7 +34,8 @@
       (return-from log-temperature nil))
 
     ;; (push-data-to-influxdb temp name :dry t)
-    (push-data-to-influxdb temp name)))
+    (push-data-to-influxdb "temperature" temp name)
+    (push-data-to-influxdb "humidity" humd name)))
 
 (defun app-handle-topic (topic payload)
   "Find and call a message handler for a given topic"
@@ -54,6 +56,8 @@
                    (getf (cdr parsed) :payload)))
         (t (format t "Got packet[~A]: ~X~%" (length parsed) parsed)))))
 
+(defparameter *broker* nil)
+
 (defun app-callback (broker data)
   (setf *broker* broker)
   (when (> (length data) 0)
@@ -69,15 +73,18 @@
            (uiop:quit)))
     (error (c) (format t "Unknown error occured:~&~a~&" c))))
 
-(defun push-data-to-influxdb (temp channel &key dry)
-  (let* ((influxdb-host "192.168.10.175")
+;; (defparameter *influx-host* "192.168.10.175")
+(defparameter *influx-host* "127.0.0.1")
+
+(defun push-data-to-influxdb (value-name value channel &key dry)
+  (let* ((influxdb-host *influx-host*)
          (influxdb-port 8086)
          (influxdb-org "org")
          (influxdb-bucket "series")
          (influxdb-token "homesweethome")
          (timestamp (format nil "~D" (* 1000 (local-time:timestamp-to-unix (local-time:now)))))
-         (data (format nil "temperature,channel=~A value=~A ~A"
-                       channel temp timestamp))
+         (data (format nil "~A,channel=~A value=~A ~A"
+                       value-name channel value timestamp))
          (url (format nil "http://~A:~A/api/v2/write?org=~A&bucket=~A&precision=ms"
                       influxdb-host influxdb-port influxdb-org influxdb-bucket)))
     (format t "Influxing Data:~%~A~%" data)
@@ -91,7 +98,7 @@
                            :content data))))
 
 ;; Example usage
-(push-data-to-influxdb 22 "salon" :dry t)
+(push-data-to-influxdb "temperature" 22 "salon" :dry t)
 ;; (push-data-to-influxdb 22 "salon")
 
 (main)
