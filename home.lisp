@@ -328,8 +328,10 @@
   "React to a temperature sensor value"
   (let* ((name (topic->object-name topic))
          (heater (format nil "z2m/prise-~A" name))
+         (humidifier (format nil "z2m/humidifier-~A" name))
          (therm (thermostat-value name))
          (temp (jv payload :temperature))
+         (humd (jv payload :humidity))
          (delta .2))
 
     (unless temp
@@ -337,8 +339,8 @@
               topic payload)
       (return-from app-handle-temp nil))
 
-    (format t "[~A] [~A]: Temperature: ~A~%"
-            (print-current-time nil) name temp)
+    (format t "[~A] [~A]: Temperature: ~A Humidity: ~A~%"
+            (print-current-time nil) name temp humd)
 
     (cache-temp name temp)
 
@@ -353,7 +355,22 @@
        (progn
          (format t "[~A]: ~A < ~A -> heater [~A] ON~%"
                  name temp therm heater)
-         (set-state *broker* heater t))))))
+         (set-state *broker* heater t))))
+
+    (let ((humidity-min 38)
+          (humidity-max 45))
+      (cond
+        ((> humd humidity-max)
+         (progn
+           (format t "[~A]: ~A > ~A -> humidifier [~A] OFF~%"
+                   name temp therm humidifier)
+           (set-state *broker* humidifier nil)))
+
+        ((< humd humidity-min)
+         (progn
+           (format t "[~A]: ~A < ~A -> humidifier [~A] ON~%"
+                   name temp therm humidifier)
+           (set-state *broker* humidifier t)))))))
 
 (defun app-handle-enable (topic payload)
   "Enable a space heater"
