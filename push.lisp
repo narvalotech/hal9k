@@ -8,6 +8,41 @@
 ;; get'em debug frames
 ;; (declaim (optimize (debug 3)))
 
+;; (defparameter *influx-host* "192.168.10.175")
+(defparameter *influx-host* "127.0.0.1")
+
+(defun push-data-to-influxdb (value-name value channel &key dry)
+  (let* ((influxdb-host *influx-host*)
+         (influxdb-port 8086)
+         (influxdb-org "org")
+         (influxdb-bucket "series")
+         (influxdb-token "homesweethome")
+         (timestamp (format nil "~D" (* 1000 (local-time:timestamp-to-unix (local-time:now)))))
+         (data (format nil "~A,channel=~A value=~A ~A"
+                       value-name channel value timestamp))
+         (url (format nil "http://~A:~A/api/v2/write?org=~A&bucket=~A&precision=ms"
+                      influxdb-host influxdb-port influxdb-org influxdb-bucket)))
+    (format t "Influxing Data:~%~A~%" data)
+
+    (unless dry
+      (drakma:http-request url
+                           :method :post
+                           :content-type "text/plain; charset=utf-8"
+                           :accept "application/json"
+                           :additional-headers `(("Authorization" . ,(format nil "Token ~A" influxdb-token)))
+                           :content data))))
+
+;; Example usage
+(push-data-to-influxdb "temperature" 22 "salon" :dry t)
+;; (push-data-to-influxdb 22 "salon")
+
+(defun notify-phone (text)
+  (drakma:http-request
+   *notify-url*
+   :method :post
+   :basic-authorization (list "" *token*)
+   :content text))
+
 (defun topic->object-name (topic)
   (let ((start (search "-" topic))
         (end (or (search "/get" topic)
@@ -37,15 +72,29 @@
     (push-data-to-influxdb "temperature" temp name)
     (push-data-to-influxdb "humidity" humd name)))
 
+(defun notify-door (topic payload)
+  (let ((name (topic->object-name topic))
+        (closed (jv payload :contact)))
+
+    (notify-phone
+     (format nil "~A: ~A"
+             name
+             (if closed "closed" "open")))))
+
 (defun app-handle-topic (topic payload)
   "Find and call a message handler for a given topic"
-  (when (search "z2m/temp" topic)
+  (when (or (search "z2m/temp" topic)
+            (search "z2m/door-cuisine" topic))
 
     ;; Assume utf-8 strings
     (setf payload (mqtt:ascii->string payload))
 
     (format t "handling: [~A] ~A~%" topic payload)
-    (log-temperature topic payload)))
+    (when (search "z2m/temp" topic)
+      (log-temperature topic payload))
+
+    (when (search "z2m/door-cuisine" topic)
+      (notify-door topic payload))))
 
 (defun app-process-packet (parsed)
   (if parsed
@@ -72,33 +121,5 @@
            (format *error-output* "Caught interrupt, aborting~%")
            (uiop:quit)))
     (error (c) (format t "Unknown error occured:~&~a~&" c))))
-
-;; (defparameter *influx-host* "192.168.10.175")
-(defparameter *influx-host* "127.0.0.1")
-
-(defun push-data-to-influxdb (value-name value channel &key dry)
-  (let* ((influxdb-host *influx-host*)
-         (influxdb-port 8086)
-         (influxdb-org "org")
-         (influxdb-bucket "series")
-         (influxdb-token "homesweethome")
-         (timestamp (format nil "~D" (* 1000 (local-time:timestamp-to-unix (local-time:now)))))
-         (data (format nil "~A,channel=~A value=~A ~A"
-                       value-name channel value timestamp))
-         (url (format nil "http://~A:~A/api/v2/write?org=~A&bucket=~A&precision=ms"
-                      influxdb-host influxdb-port influxdb-org influxdb-bucket)))
-    (format t "Influxing Data:~%~A~%" data)
-
-    (unless dry
-      (drakma:http-request url
-                           :method :post
-                           :content-type "text/plain; charset=utf-8"
-                           :accept "application/json"
-                           :additional-headers `(("Authorization" . ,(format nil "Token ~A" influxdb-token)))
-                           :content data))))
-
-;; Example usage
-(push-data-to-influxdb "temperature" 22 "salon" :dry t)
-;; (push-data-to-influxdb 22 "salon")
 
 (main)
