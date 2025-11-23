@@ -4,6 +4,7 @@
 (ql:quickload "local-time")
 (ql:quickload "cl-json")
 (ql:quickload "cl-mqtt")
+(ql:quickload "trivial-timer")
 
 ;; get'em debug frames
 ;; (declaim (optimize (debug 3)))
@@ -43,6 +44,34 @@
    :basic-authorization (list "" *token*)
    :content text))
 
+(defparameter *timer* nil)
+
+(defun init-timer (fn)
+  (trivial-timer:initialize-timer)
+  (setf *timer*
+        (list nil fn)))
+
+(defun reset-timer (timer interval)
+  (declare (ignore timer))
+  (destructuring-bind (id fn) *timer*
+    (when id
+      (trivial-timer:cancel-timer-call id))
+    (setf *timer*
+          (list
+           (trivial-timer:register-timer-call (floor (* 1000 interval)) fn)
+           fn))))
+
+(defun stop-timer (timer)
+  (declare (ignore timer))
+  (destructuring-bind (id fn) *timer*
+    (declare (ignore fn))
+    (when id
+      (trivial-timer:cancel-timer-call id))))
+
+(defparameter *door-timer*
+  (init-timer
+   (lambda () (notify-phone "Kitchen is open"))))
+
 (defun topic->object-name (topic)
   (let ((start (search "-" topic))
         (end (or (search "/get" topic)
@@ -73,13 +102,16 @@
     (push-data-to-influxdb "humidity" humd name)))
 
 (defun notify-door (topic payload)
-  (let ((name (topic->object-name topic))
-        (closed (jv payload :contact)))
+  (declare (ignore topic))
+  (let ((closed (jv payload :contact)))
 
-    (notify-phone
-     (format nil "~A: ~A"
-             name
-             (if closed "closed" "open")))))
+    (if closed
+        (progn
+          (format t "Kitchen window closed~%")
+          (stop-timer *door-timer*))
+        (progn
+          (format t "Kitchen window opened~%")
+          (reset-timer *door-timer* (* 60 30))))))
 
 (defun app-handle-topic (topic payload)
   "Find and call a message handler for a given topic"
@@ -89,7 +121,8 @@
     ;; Assume utf-8 strings
     (setf payload (mqtt:ascii->string payload))
 
-    (format t "handling: [~A] ~A~%" topic payload)
+    ;; (format t "handling: [~A] ~A~%" topic payload)
+
     (when (search "z2m/temp" topic)
       (log-temperature topic payload))
 
