@@ -68,9 +68,13 @@
     (when id
       (trivial-timer:cancel-timer-call id))))
 
+(defparameter *door-nfy-sent* nil)
+
 (defparameter *door-timer*
   (init-timer
-   (lambda () (notify-phone "Kitchen is open"))))
+   (lambda () (progn
+                (setf *door-nfy-sent* t)
+                (notify-phone "Kitchen is open")))))
 
 (defun topic->object-name (topic)
   (let ((start (search "-" topic))
@@ -108,6 +112,9 @@
     (if closed
         (progn
           (format t "Kitchen window closed~%")
+          (when *door-nfy-sent*
+            (setf *door-nfy-sent* nil)
+            (notify-phone "Kitchen is closed"))
           (stop-timer *door-timer*))
         (progn
           (format t "Kitchen window opened~%")
