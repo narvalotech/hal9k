@@ -357,7 +357,7 @@
                  name temp therm heater)
          (set-state *broker* heater t))))
 
-    (let ((humidity-min 38)
+    (let ((humidity-min 42)
           (humidity-max 45))
       (cond
         ((> humd humidity-max)
