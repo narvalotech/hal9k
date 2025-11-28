@@ -363,13 +363,13 @@
         ((> humd humidity-max)
          (progn
            (format t "[~A]: ~A > ~A -> humidifier [~A] OFF~%"
-                   name temp therm humidifier)
+                   name humd humidity-max humidifier)
            (set-state *broker* humidifier nil)))
 
         ((< humd humidity-min)
          (progn
            (format t "[~A]: ~A < ~A -> humidifier [~A] ON~%"
-                   name temp therm humidifier)
+                   name humd humidity-min humidifier)
            (set-state *broker* humidifier t)))))))
 
 (defun app-handle-enable (topic payload)
