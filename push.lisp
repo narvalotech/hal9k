@@ -1,4 +1,6 @@
-(push "/home/john/hal9k/" ql:*local-project-directories*)
+(push "/home/jon/hal9k/" ql:*local-project-directories*)
+
+(push :DRAKMA-NO-SSL *features*)
 
 (ql:quickload "drakma")
 (ql:quickload "local-time")
@@ -10,7 +12,8 @@
 ;; (declaim (optimize (debug 3)))
 
 ;; (defparameter *influx-host* "192.168.10.175")
-(defparameter *influx-host* "127.0.0.1")
+;; (defparameter *influx-host* "127.0.0.1")
+(defparameter *influx-host* "192.168.4.32")
 
 (defun push-data-to-influxdb (value-name value channel &key dry)
   (let* ((influxdb-host *influx-host*)

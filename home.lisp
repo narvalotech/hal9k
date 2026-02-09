@@ -550,17 +550,17 @@ sbcl --load quicklisp.lisp \
 
 How to install deps, load and run
 
-sbcl --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+sbcl --eval '(push "/home/jon/hal9k/" ql:*local-project-directories*)' \
      --eval '(ql:quickload "home")' \
      --eval "(in-package :home)" \
      --eval "(main)"
 
-ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+ccl -b --eval '(push "/home/jon/hal9k/" ql:*local-project-directories*)' \
      --eval '(ql:quickload "home")' \
      --eval "(in-package :home)" \
      --eval "(main)"
 
-ccl -b --eval '(push "/home/john/hal9k/" ql:*local-project-directories*)' \
+ccl -b --eval '(push "/home/jon/hal9k/" ql:*local-project-directories*)' \
      --load hal9k/web.lisp
 
 |#

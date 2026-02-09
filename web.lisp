@@ -510,6 +510,8 @@
 
 (format t "Starting webserver~%")
 
+(ql:quickload :clack-handler-hunchentoot)
+
 ;; (ql:quickload :woo)
 (defparameter *handler*
   (clack:clackup #'response

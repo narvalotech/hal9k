@@ -4,9 +4,9 @@ After=multi-user.target
 
 [Service]
 Type=simple
-User=john
-WorkingDirectory=/home/john/hal9k
-ExecStart=/home/john/hal9k/support/home.sh
+User=jon
+WorkingDirectory=/home/jon/hal9k
+ExecStart=/home/jon/hal9k/support/home.sh
 Restart=always
 RestartSec=2s
 StandardOutput=journal
