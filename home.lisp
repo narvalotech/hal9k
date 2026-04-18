@@ -364,16 +364,12 @@
          (progn
            (format t "[~A]: ~A > ~A -> humidifier [~A] OFF~%"
                    name humd humidity-max humidifier)
-           (when (search "chambre" humidifier)
-             (set-state *broker* "z2m/humidifier-rachel" nil))
            (set-state *broker* humidifier nil)))
 
         ((< humd humidity-min)
          (progn
            (format t "[~A]: ~A < ~A -> humidifier [~A] ON~%"
                    name humd humidity-min humidifier)
-           (when (search "chambre" humidifier)
-             (set-state *broker* "z2m/humidifier-rachel" t))
            (set-state *broker* humidifier t)))))))
 
 (defun app-handle-enable (topic payload)
