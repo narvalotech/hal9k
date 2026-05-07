@@ -169,6 +169,8 @@
     ;; strings as payload.
     (setf payload (ascii->string payload))
 
+    ;; (format t "HANDLE: ~A ~A~%" topic payload)
+
     (funcall handler-fn topic payload)))
 
 (app-handle-topic "z2m/test-sensor-0012" (string->ascii "somepayload"))
@@ -439,40 +441,41 @@
                       (format nil "z2m/light-~A" name)
                       state)))
 
+(defparameter *light-states* (make-hash-table :test 'equalp))
+
+(defun get-ms ()
+  (floor
+   (* 1000
+      (/ (get-internal-real-time)
+         internal-time-units-per-second))))
+
 (defun app-handle-switch (topic payload)
   (let* ((action (jv payload :action))
          (name (topic->object-name topic))
          (light (format nil "z2m/light-~A" name))
-         (light-state (equalp "on" action)))
+         (light-state (equalp "on" action))
+         (stored (gethash name *light-states*))
+         (last-pushed (car stored))
+         (last-state (cadr stored))
+         (double-press (and
+                        last-pushed
+                        (> 1500 (- (get-ms) last-pushed)))))
+
+    (setf (gethash name *light-states*)
+          (list (get-ms) light-state))
+
+    (when (or double-press (eql light-state last-state))
+      (format t "~A: double-press detected~%" name)
+      (when (and (search "salon" topic) (is-on-off? action))
+        (set-state *broker* "z2m/light-tv" light-state)))
 
     (cond
-      ;; ((search "kitchen" topic)
-      ;;  ;; special case: "cuisine" controls all the lights
-      ;;  ;; long-presses turn on/off the big halogen light
-      ;;  (cond
-      ;;    ((is-brightness-up? action)
-      ;;     (set-state *broker* "z2m/light-chonk" t))
-      ;;    ((is-brightness-down? action)
-      ;;     (set-state *broker* "z2m/light-chonk" nil))
-      ;;    ((is-on-off? action)
-      ;;     (set-all-lights *broker* light-state))))
-      ((search "hallway" topic)
-       (cond
-         ((is-brightness-up? action)
-          (set-state *broker* "z2m/light-door" t))
-         ((is-brightness-down? action)
-          (set-state *broker* "z2m/light-door" nil))
-         ((is-on-off? action)
-          (set-state *broker* light light-state))))
-      ;; Other switches control their respective lights
-      (t
-       (cond
-         ((is-brightness-up? action)
-          (set-brightness *broker* light 255))
-         ((is-brightness-down? action)
-          (set-brightness *broker* light 20))
-         ((is-on-off? action)
-          (set-state *broker* light light-state)))))))
+      ((is-brightness-up? action)
+       (set-brightness *broker* light 255))
+      ((is-brightness-down? action)
+       (set-brightness *broker* light 20))
+      ((is-on-off? action)
+       (set-state *broker* light light-state)))))
 
 (defun make-switch-payload (action-string)
   (json:encode-json-to-string
