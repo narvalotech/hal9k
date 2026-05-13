@@ -464,9 +464,9 @@
     (setf (gethash name *light-states*)
           (list (get-ms) light-state))
 
-    (when (or double-press (eql light-state last-state))
+    (when (eql light-state last-state)
       (format t "~A: double-press detected~%" name)
-      (when (and (search "salon" topic) (is-on-off? action))
+      (when (and (search "sewing" topic) (is-on-off? action))
         (set-state *broker* "z2m/light-tv" light-state)))
 
     (cond
