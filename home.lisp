@@ -360,7 +360,7 @@
          (set-state *broker* heater t))))
 
     (let ((humidity-min 47)
-          (humidity-max 55))
+          (humidity-max 50))
       (cond
         ((> humd humidity-max)
          (progn
@@ -467,6 +467,9 @@
     (when (eql light-state last-state)
       (format t "~A: double-press detected~%" name)
       (when (and (search "sewing" topic) (is-on-off? action))
+        (unless light-state
+          ;; turn on? no on, only off!
+          (set-state *broker* "z2m/light-salon" light-state))
         (set-state *broker* "z2m/light-tv" light-state)))
 
     (cond
