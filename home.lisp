@@ -459,12 +459,12 @@
          (last-state (cadr stored))
          (double-press (and
                         last-pushed
-                        (> 1500 (- (get-ms) last-pushed)))))
+                        (< (- (get-ms) last-pushed) 300))))
 
     (setf (gethash name *light-states*)
           (list (get-ms) light-state))
 
-    (when (eql light-state last-state)
+    (when (and (not double-press) (eql light-state last-state))
       (format t "~A: double-press detected~%" name)
       (when (and (search "sewing" topic) (is-on-off? action))
         (unless light-state
