@@ -523,6 +523,7 @@
   ;; (some #'slynk-listener-thread-p (bt:all-threads)))
 
 (defparameter *home-server* "127.0.0.1")
+;; (defparameter *home-server* "192.168.4.20")
 ;; (defparameter *home-server* "192.168.10.150")
 ;; (defparameter *home-server* "192.168.10.175")
 

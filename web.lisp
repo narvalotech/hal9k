@@ -6,7 +6,8 @@
 (defparameter *offline* nil)
 ;; (defparameter *home-server* "192.168.10.175")
 ;; (defparameter *home-server* "192.168.10.150")
-(defparameter *home-server* "127.0.0.1")
+;; (defparameter *home-server* "127.0.0.1")
+(defparameter *home-server* "192.168.4.20")
 
 ;; uncomment this to run without MQTT
 ;; (defparameter *offline* t)
@@ -38,9 +39,15 @@
      #:publish-with-response
      #:with-broker)))
 
+(defun getval (key al)
+  (cdr (assoc key al)))
+
 (defun decode-type/name/value (payload)
   (let ((decoded (json:decode-json-from-string payload)))
-    (mapcar #'cdr decoded)))
+    (list
+     (getval :type decoded)
+     (getval :name decoded)
+     (getval :value decoded))))
 
 (decode-type/name/value "{\"type\":\"button\",\"name\":\"chambre\",\"value\":\"toggle\"}")
  ; => ("button" "chambre" "toggle")
@@ -498,15 +505,21 @@
 
   (list 200 '(:content-type "text/html") '("")))
 
+(defun handle-json (env)
+  (declare (ignore env))
+  (list 200 '(:content-type "application/json")
+        (list (cl-json:encode-json-plist-to-string
+               (list :lights (mapcar (lambda (name) (format nil "~(~A~)" name))
+                                     (get-lights-list)))))))
+
 (defun response (env)
-  ;; (format t "env: ~A~%" env)
-
-  ;; Response:
-  ;; [status code] [headers (plist)] [body (strings / vector / pathname)]
-
   (case (getf env :request-method)
     (:PUT (handle-put env))
-    (t (list 200 '(:content-type "text/html") (list (controls))))))
+    (:GET
+     (alexandria:switch ((getf env :path-info) :test #'equalp)
+       ("/json" (handle-json env))
+       (t (list 200 '(:content-type "text/html") (list (controls))))
+       ))))
 
 (format t "Starting webserver~%")
 
