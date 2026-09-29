@@ -441,6 +441,17 @@
                       (format nil "z2m/light-~A" name)
                       state)))
 
+(defun set-basement-lights (broker enable)
+  (set-state broker "z2m/light-basement-1" enable)
+  (set-state broker "z2m/light-basement-2" enable)
+  (when enable
+    (set-brightness broker "z2m/light-basement-1" 30)
+    (set-brightness broker "z2m/light-basement-2" 30)))
+
+(defparameter *basement-timer*
+  (init-timer
+   (lambda () (set-basement-lights *broker* nil))))
+
 (defparameter *light-states* (make-hash-table :test 'equalp))
 
 (defun get-ms ()
@@ -465,9 +476,13 @@
           (list (get-ms) light-state))
 
     (when (and (not double-press) (eql light-state last-state))
-      (format t "~A: double-press detected~%" name)
+      (format t "~A: double-press detected (~A)~%" name light-state)
       (when (and (search "sewing" topic) (is-on-off? action))
         (unless light-state
+          ;; turn on lights for 5 minutes at reduced brightness
+          (set-basement-lights *broker* t)
+          (reset-timer *basement-timer* (* 60 5))
+
           ;; turn on? no on, only off!
           (set-state *broker* "z2m/light-salon" light-state))
         (set-state *broker* "z2m/light-tv" light-state)))
@@ -489,22 +504,6 @@
 
 (make-switch-payload "brightness_move_up")
  ; => "{\"battery\":74,\"linkquality\":120,\"action\":\"brightness_move_up\"}"
-
-(defparameter *door-timer*
-  (init-timer
-   (lambda () (set-state *broker* "z2m/light-door" nil))))
-
-(defparameter *door-timeout* (* 60 5))
-
-(defun app-handle-door (topic payload)
-  (declare (ignore topic))
-  (let ((door-open (not (jv payload :contact)))
-        (light (format nil "z2m/light-door")))
-    (when door-open
-      ;; turn on the light
-      (set-state *broker* light t)
-      ;; turn off the light 5 minutes later
-      (reset-timer *door-timer* *door-timeout*))))
 
 (format t "Done eval-ing~%")
 
